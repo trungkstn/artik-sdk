@@ -22,17 +22,10 @@
 #include <stdbool.h>
 #include <artik_bluetooth.h>
 #include <stdint.h>
+#include "core.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define OBEXD_CHECK_CMD     "ps -ax | grep obexd |grep -v grep"
-#define OBEXD_CMD           "obexd"
-#define OBEXD_START_CMD     "/usr/libexec/bluetooth/obexd"
-#define OBEXD_DESTROY_CMD   "pkill -9 obexd"
-
-#define OBEXD_WATI_TIME 2
-#define OBEXD_BUF_SIZE  100
 
 artik_error bt_ftp_create_session(char *dest_addr);
 

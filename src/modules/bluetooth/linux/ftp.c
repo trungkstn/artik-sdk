@@ -31,6 +31,13 @@
 #include "core.h"
 #include "ftp.h"
 
+#define OBEXD_CHECK_CMD     "ps -ax | grep obexd |grep -v grep"
+#define OBEXD_CMD           "obexd"
+#define OBEXD_START_CMD     "/usr/libexec/bluetooth/obexd"
+#define OBEXD_DESTROY_CMD   "pkill -9 obexd"
+
+#define OBEXD_WATI_TIME 2
+#define OBEXD_BUF_SIZE  100
 static FILE *obexd_start_stream;
 static bool obexed_is_used = FALSE;
 static bt_ftp_transport_state ftp_state = BT_FTP_STATE_END;
