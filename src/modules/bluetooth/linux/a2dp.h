@@ -36,6 +36,26 @@ typedef enum {
 	BT_A2DP_CODEC_ATRAC = 0x03
 } artik_bt_a2dp_codec;
 
+/*!
+ *  \brief Bluetooth AD2P source definition
+ *
+ *  Structure containing the elements
+ *  defining Bluetooth A2P source properties
+ */
+typedef struct	{
+	char *device;
+	char *uuid;
+	unsigned char codec;
+	unsigned char *configuration;
+	char *state;
+} artik_bt_a2dp_source_property;
+
+typedef unsigned char * (*select_config_callback)(
+	unsigned char *capabilities, int *len);
+typedef void (*set_config_callback)(
+		artik_bt_a2dp_source_property * properties);
+typedef void (*clear_config_callback)(void);
+
 typedef struct {
 	artik_bt_a2dp_codec codec;
 	bool delay_reporting;

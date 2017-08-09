@@ -496,6 +496,84 @@ static void ftp_put_file_test(void)
 	artik_release_api_module(loop);
 }
 
+static void ftp_suspend_resume_transfer_test(void)
+{
+	artik_error ret = S_OK;
+	int watch_id = 0;
+	int timeout_id = 0;
+	char *object_name = NULL;
+	const char *object_type = "file";
+	const char *target_object = "/root/test_file";
+	const char *target_put = "put_file";
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
+
+	ret = bt->ftp_create_session(remote_mac_addr);
+	CU_ASSERT(ret == S_OK);
+
+	ret = _ftp_object_search(NULL, object_type, &object_name);
+	CU_ASSERT(ret == S_OK);
+	CU_ASSERT(object_name != NULL);
+
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
+	ret = bt->set_callback(BT_EVENT_FTP,
+		_property_callback, (void *)loop);
+	CU_ASSERT(ret == S_OK);
+
+	loop->add_fd_watch(STDIN_FILENO,
+		(WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP
+		| WATCH_IO_NVAL),
+		_on_keyboard_received, (void *)loop, &watch_id);
+
+	ret = bt->ftp_get_file((char *)target_object, object_name);
+	CU_ASSERT(ret == S_OK);
+
+	ret = bt->ftp_suspend_transfer();
+	CU_ASSERT(ret == S_OK);
+	loop->run();
+	CU_ASSERT(suspended == 1);
+
+	ret = bt->ftp_resume_transfer();
+	CU_ASSERT(ret == S_OK);
+	loop->run();
+	CU_ASSERT(property_status == S_OK);
+	CU_ASSERT(suspended == 0);
+
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
+	ret = bt->ftp_put_file((char *)target_object,
+		(char *)target_put);
+	CU_ASSERT(ret == S_OK);
+
+	ret = bt->ftp_suspend_transfer();
+	CU_ASSERT(ret == S_OK);
+	loop->run();
+	CU_ASSERT(suspended == 1);
+
+	ret = bt->ftp_resume_transfer();
+	CU_ASSERT(ret == S_OK);
+	loop->run();
+	CU_ASSERT(property_status == S_OK);
+	CU_ASSERT(suspended == 0);
+
+	ret = bt->ftp_remove_session();
+	CU_ASSERT(ret == S_OK);
+
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
+	if (object_name)
+		free(object_name);
+	loop->remove_fd_watch(watch_id);
+	artik_release_api_module(bt);
+	artik_release_api_module(loop);
+}
+
 artik_error cunit_add_suite(CU_pSuite *psuite)
 {
 	CU_add_test(*psuite, "ftp_create_session_test",
@@ -514,6 +592,8 @@ artik_error cunit_add_suite(CU_pSuite *psuite)
 		ftp_get_file_test);
 	CU_add_test(*psuite, "ftp_put_file_test",
 		ftp_put_file_test);
+	CU_add_test(*psuite, "ftp_suspend_resume_transfer_test",
+		ftp_suspend_resume_transfer_test);
 
 	return S_OK;
 }

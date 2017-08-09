@@ -40,11 +40,11 @@ artik_error bt_set_trust(const char *remote_address);
 artik_error bt_unset_trust(const char *remote_address);
 artik_error bt_set_block(const char *remote_address);
 artik_error bt_unset_block(const char *remote_address);
-artik_error bt_get_devices(artik_bt_device **device_list, int *count);
-artik_error bt_get_paired_devices(artik_bt_device **device_list, int *count);
-artik_error bt_get_connected_devices(artik_bt_device **device_list, int *count);
+artik_error bt_get_device(const char *addr, artik_bt_device *device);
+artik_error bt_get_devices(artik_bt_device_type device_type,
+		artik_bt_device **device_list, int *count);
 artik_error bt_free_device(artik_bt_device *device);
-artik_error bt_free_devices(artik_bt_device *device_list, int count);
+artik_error bt_free_devices(artik_bt_device **device_list, int count);
 bool bt_is_paired(const char *remote_address);
 bool bt_is_connected(const char *remote_address);
 bool bt_is_trusted(const char *remote_address);

@@ -72,87 +72,147 @@ static const gchar _introspection_xml[] =
 	"</interface>"
 "</node>";
 
-static void release(void *user_data)
+static void default_release(void)
 {
 	log_info("Release\n");
 }
 
-static void request_pincode(artik_bt_agent_request_handle handle, char *device, void *user_data)
+static void default_request_pincode(artik_bt_agent_request_handle handle, char *device)
 {
 	log_info("Request pincode (%s)\n", device);
 
 	bt_agent_send_pincode(handle, DEFAULT_PINCODE);
 }
 
-static void display_pincode(char *device, char *pincode, void *user_data)
+static void default_display_pincode(char *device, char *pincode)
 {
 	log_info("Display Pincode (%s, %s)\n", device, pincode);
 }
 
-static void request_passkey(artik_bt_agent_request_handle handle, char *device, void *user_data)
+static void default_request_passkey(artik_bt_agent_request_handle handle, char *device)
 {
 	log_info("Request passkey (%s) - Not implemented\n", device);
 	bt_agent_send_error(handle, BT_AGENT_REQUEST_REJECTED, "Not implemented");
 }
 
-static void display_passkey(char *device, unsigned int passkey,
-		unsigned int entered, void *user_data)
+static void default_display_passkey(char *device, unsigned int passkey,
+		unsigned int entered)
 {
 	log_info("Display Passkey (%s, %06u, entered %u)\n",
 			device, passkey, entered);
 }
 
-static void request_confirmation(artik_bt_agent_request_handle handle, char *device,
-		unsigned int passkey, void *user_data)
+static void default_request_confirmation(artik_bt_agent_request_handle handle, char *device,
+		unsigned int passkey)
 {
 	log_info("Request Confirmation (%s, %06u)\n", device, passkey);
 	bt_agent_send_empty_response(handle);
 }
 
-static void request_authorization(artik_bt_agent_request_handle handle, char *device, void *user_data)
+static void default_request_authorization(artik_bt_agent_request_handle handle, char *device)
 {
 	log_info("Request Authorization (%s)\n", device);
 	bt_agent_send_empty_response(handle);
 }
 
-static void authorize_service(artik_bt_agent_request_handle handle, char *device, char *uuid, void *user_data)
+static void default_authorize_service(artik_bt_agent_request_handle handle, char *device, char *uuid)
 {
 	log_info("Authorize service (%s,  %s)\n", device, uuid);
 	bt_agent_send_empty_response(handle);
 }
 
-static void cancel(void *user_data)
+static void default_cancel(void)
 {
 	log_info("Cancel\n");
 }
 
-static artik_bt_agent_callbacks _agent = {
-	release,
-	request_pincode,
-	display_pincode,
-	request_passkey,
-	display_passkey,
-	request_confirmation,
-	request_authorization,
-	authorize_service,
-	cancel,
-	NULL
-};
+static void _agent_callback(artik_bt_event event, void *data)
+{
+	artik_bt_agent_request_property *request_property = NULL;
+	artik_bt_agent_pincode_property *pincode_property = NULL;
+	artik_bt_agent_passkey_property *passkey_property = NULL;
+	artik_bt_agent_confirmation_property *confirmation_property = NULL;
+	artik_bt_agent_authorize_property *authorize_property = NULL;
+
+	if (hci.callback[event].fn) {
+		_user_callback(event, data);
+		return;
+	}
+
+	switch (event) {
+	case BT_EVENT_AGENT_REQUEST_PINCODE:
+		request_property = (artik_bt_agent_request_property *)data;
+
+		default_request_pincode(request_property->handle,
+			request_property->device);
+		break;
+	case BT_EVENT_AGENT_DISPLAY_PINCODE:
+		pincode_property = (artik_bt_agent_pincode_property *)data;
+
+		default_display_pincode(pincode_property->device,
+			pincode_property->pincode);
+		break;
+	case BT_EVENT_AGENT_REQUEST_PASSKEY:
+		request_property = (artik_bt_agent_request_property *)data;
+
+		default_request_passkey(request_property->handle,
+			request_property->device);
+		break;
+	case BT_EVENT_AGENT_DISPLAY_PASSKEY:
+		passkey_property = (artik_bt_agent_passkey_property *)data;
+
+		default_display_passkey(passkey_property->device,
+			passkey_property->passkey, passkey_property->entered);
+		break;
+	case BT_EVENT_AGENT_CONFIRM:
+		confirmation_property =
+			(artik_bt_agent_confirmation_property *)data;
+
+		default_request_confirmation(confirmation_property->handle,
+			confirmation_property->device,
+			confirmation_property->passkey);
+		break;
+	case BT_EVENT_AGENT_AUTHOREZE:
+		request_property = (artik_bt_agent_request_property *)data;
+
+		default_request_authorization(request_property->handle,
+			request_property->device);
+		break;
+	case BT_EVENT_AGENT_AUTHOREZE_SERVICE:
+		authorize_property = (artik_bt_agent_authorize_property *)data;
+
+		default_authorize_service(authorize_property->handle,
+			authorize_property->device, authorize_property->uuid);
+		break;
+	case BT_EVENT_AGENT_RELEASE:
+		default_release();
+		break;
+	case BT_EVENT_AGENT_CANCEL:
+		default_cancel();
+		break;
+	default:
+		break;
+	}
+}
 
 static void _handle_release(void)
 {
-	_agent.release_func(_agent.user_data);
+	_agent_callback(BT_EVENT_AGENT_RELEASE, NULL);
 }
 
 static void _handle_request_pincode(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
 	gchar *path = NULL, *device = NULL;
+	artik_bt_agent_request_property request_property = {0};
 
 	g_variant_get(parameters, "(o)", &path);
 	_get_device_address(path, &device);
 
-	_agent.request_pincode_func(invocation, device, _agent.user_data);
+	request_property.handle = invocation;
+	request_property.device = device;
+
+	_agent_callback(BT_EVENT_AGENT_REQUEST_PINCODE, (void *)&request_property);
 
 	g_free(device);
 	g_free(path);
@@ -162,11 +222,16 @@ static void _handle_display_pincode(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
 	gchar *path = NULL, *device = NULL, *pincode = NULL;
+	artik_bt_agent_pincode_property pincode_property = {0};
 
 	g_variant_get(parameters, "(os)", &path, &pincode);
 	_get_device_address(path, &device);
 
-	_agent.display_pincode_func(device, pincode, _agent.user_data);
+	pincode_property.device = device;
+	pincode_property.pincode = pincode;
+
+	_agent_callback(BT_EVENT_AGENT_DISPLAY_PINCODE, (void *)&pincode_property);
+
 	g_dbus_method_invocation_return_value(invocation, NULL);
 
 	g_free(device);
@@ -178,11 +243,15 @@ static void _handle_request_passkey(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
 	gchar *path = NULL, *device = NULL;
+	artik_bt_agent_request_property request_property = {0};
 
 	g_variant_get(parameters, "(o)", &path);
 	_get_device_address(path, &device);
 
-	_agent.request_passkey_func(invocation, device, _agent.user_data);
+	request_property.handle = invocation;
+	request_property.device = device;
+
+	_agent_callback(BT_EVENT_AGENT_REQUEST_PASSKEY, (void *)&request_property);
 
 	g_free(device);
 	g_free(path);
@@ -194,11 +263,17 @@ static void _handle_display_passkey(GVariant *parameters,
 	gchar *path = NULL, *device = NULL;
 	guint32 passkey;
 	guint16 entered;
+	artik_bt_agent_passkey_property passkey_property = {0};
 
 	g_variant_get(parameters, "(ouq)", &path, &passkey, &entered);
 	_get_device_address(path, &device);
 
-	_agent.display_passkey_func(device, passkey, entered, _agent.user_data);
+	passkey_property.device = device;
+	passkey_property.passkey = passkey;
+	passkey_property.entered = entered;
+
+	_agent_callback(BT_EVENT_AGENT_DISPLAY_PASSKEY, (void *)&passkey_property);
+
 	g_dbus_method_invocation_return_value(invocation, NULL);
 
 	g_free(device);
@@ -210,11 +285,16 @@ static void _handle_request_confirmation(GVariant *parameters,
 {
 	gchar *path = NULL, *device = NULL;
 	guint32 passkey;
+	artik_bt_agent_confirmation_property confirmation_property = {0};
 
 	g_variant_get(parameters, "(ou)", &path, &passkey);
 	_get_device_address(path, &device);
 
-	_agent.request_confirmation_func(invocation, device, passkey, _agent.user_data);
+	confirmation_property.handle = invocation;
+	confirmation_property.device = device;
+	confirmation_property.passkey = passkey;
+
+	_agent_callback(BT_EVENT_AGENT_CONFIRM, (void *)&confirmation_property);
 
 	g_free(device);
 	g_free(path);
@@ -224,11 +304,15 @@ static void _handle_request_authorization(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
 	gchar *path = NULL, *device = NULL;
+	artik_bt_agent_request_property request_property = {0};
 
 	g_variant_get(parameters, "(o)", &path);
 	_get_device_address(path, &device);
 
-	_agent.request_authorization_func(invocation, device, _agent.user_data);
+	request_property.handle = invocation;
+	request_property.device = device;
+
+	_agent_callback(BT_EVENT_AGENT_AUTHOREZE, (void *)&request_property);
 
 	g_free(device);
 	g_free(path);
@@ -238,11 +322,16 @@ static void _handle_authorize_service(GVariant *parameters,
 		GDBusMethodInvocation *invocation)
 {
 	gchar *path = NULL, *uuid = NULL, *device = NULL;
+	artik_bt_agent_authorize_property authorize_property = {0};
 
 	g_variant_get(parameters, "(os)", &path, &uuid);
 	_get_device_address(path, &device);
 
-	_agent.authorize_service_func(invocation, device, uuid, _agent.user_data);
+	authorize_property.handle = invocation;
+	authorize_property.device = device;
+	authorize_property.uuid = uuid;
+
+	_agent_callback(BT_EVENT_AGENT_AUTHOREZE_SERVICE, (void *)&authorize_property);
 
 	g_free(device);
 	g_free(path);
@@ -250,7 +339,7 @@ static void _handle_authorize_service(GVariant *parameters,
 
 static void _handle_cancel(void)
 {
-	_agent.cancel_func(_agent.user_data);
+	_agent_callback(BT_EVENT_AGENT_CANCEL, NULL);
 }
 
 static void handle_method_call(GDBusConnection *connection,
@@ -395,36 +484,6 @@ artik_error bt_agent_unregister(void)
 
 exit:
 	return ret;
-}
-
-artik_error bt_agent_set_callback(artik_bt_agent_callbacks *agent_callback)
-{
-	if (agent_callback) {
-		_agent.user_data = agent_callback->user_data;
-		if (agent_callback->release_func)
-			_agent.release_func = agent_callback->release_func;
-		if (agent_callback->request_pincode_func)
-			_agent.request_pincode_func = agent_callback->request_pincode_func;
-		if (agent_callback->display_pincode_func)
-			_agent.display_pincode_func = agent_callback->display_pincode_func;
-		if (agent_callback->request_passkey_func)
-			_agent.request_passkey_func = agent_callback->request_passkey_func;
-		if (agent_callback->display_passkey_func)
-			_agent.display_passkey_func = agent_callback->display_passkey_func;
-		if (agent_callback->request_confirmation_func)
-			_agent.request_confirmation_func =
-				agent_callback->request_confirmation_func;
-		if (agent_callback->request_authorization_func)
-			_agent.request_authorization_func =
-				agent_callback->request_authorization_func;
-		if (agent_callback->authorize_service_func)
-			_agent.authorize_service_func =
-				agent_callback->authorize_service_func;
-		if (agent_callback->cancel_func)
-			_agent.cancel_func = agent_callback->cancel_func;
-		return S_OK;
-	} else
-		return E_INVALID_VALUE;
 }
 
 static artik_error send_response(artik_bt_agent_request_handle handle, GVariant *variant)

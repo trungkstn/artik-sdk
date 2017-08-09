@@ -314,9 +314,9 @@ static void on_bond(void *data, void *user_data)
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 	char *remote_address = (char *)user_data;
-	bool paired = *(bool *)data;
+	artik_bt_device dev = *(artik_bt_device *)data;
 
-	if (paired) {
+	if (dev.is_bonded) {
 		fprintf(stdout, "<FTP>: %s - %s\n", __func__, "Paired");
 
 		if (bt->ftp_create_session(remote_address) == S_OK) {

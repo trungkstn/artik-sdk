@@ -271,17 +271,18 @@ artik_error bt_pan_disconnect(void)
 	return S_OK;
 }
 
-artik_error bt_pan_get_connected(bool *connected)
+bool bt_pan_is_connected(void)
 {
 	artik_error e = S_OK;
 	GVariant *v = NULL;
+	bool connected = false;
 
 	e = _get_pan_property("Connected", &v);
 	if (e == S_OK && v) {
 		g_variant_get(v, "b", connected);
 		g_variant_unref(v);
 	}
-	return e;
+	return connected;
 }
 
 artik_error bt_pan_get_interface(char **_interface)

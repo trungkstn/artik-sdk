@@ -38,6 +38,30 @@ static artik_bluetooth_module *bt;
 static artik_loop_module *loop;
 static int g_quit;
 
+static int index_to_int(char *index)
+{
+	const char *s = index;
+	int result;
+
+	printf("convert index[%s]\n", index);
+	if (NULL == index || 0 == strlen(index)) {
+		fprintf(stdout, "Index is NULL or empty.\n");
+		return -1;
+	}
+
+	while (*s != '\0') {
+		if (*s >= '0' && *s <= '9') {
+			s++;
+		} else {
+			fprintf(stdout, "Please input correct index.\n");
+			return -1;
+		}
+	}
+
+	result = atoi(index);
+	return result;
+}
+
 void print_devices(artik_bt_device *devices, int num)
 {
 	int i = 0, j = 0;
@@ -90,11 +114,11 @@ static void prv_start_scan(char *buffer, void *user_data)
 	artik_bt_device *paired_device = NULL;
 	int paired_device_num = 0;
 
-	bt->get_paired_devices(&paired_device, &paired_device_num);
+	bt->get_devices(BT_DEVICE_PARIED, &paired_device, &paired_device_num);
 	if (paired_device_num) {
 		printf("\nPaired devices:\n");
 		print_devices(paired_device, paired_device_num);
-		bt->free_devices(paired_device, paired_device_num);
+		bt->free_devices(&paired_device, paired_device_num);
 	}
 
 	ret = bt->set_callback(BT_EVENT_SCAN, scan_callback, "avrcp test");
@@ -184,22 +208,23 @@ static void prv_list_items(char *buffer, void *user_data)
 	node = item_list;
 
 	while (node != NULL) {
-		printf("item_obj_path : %s\n", node->item_obj_path);
 		artik_bt_avrcp_item_property *property = node->property;
 
 		if (property != NULL) {
-			printf("Player object path: %s\n", property->player);
-			printf("Displayable name: %s\n", property->name);
-			printf("Type: %s\n", property->type);
-			printf("Folder: %s\n", property->folder);
-			printf("Playable: %d\n", property->playable);
-			printf("Title: %s\n", property->title);
-			printf("Artist: %s\n", property->artist);
-			printf("Album: %s\n", property->album);
-			printf("Genre: %s\n", property->genre);
-			printf("Number of tracks: %d\n", property->number_of_tracks);
-			printf("track #%d\n", property->number);
-			printf("duration: %d ms\n", property->duration);
+			printf("\n#%d  Name: %s\n", node->index, property->name);
+			if (strncmp(property->type, "folder", strlen("folder") + 1) == 0) {
+				printf("\t##Folder: %s", property->folder);
+				printf("\tNumber of tracks: %d\n", property->number_of_tracks);
+			} else {
+				printf("\t##Type: %s\t\t", property->type);
+				printf("Playable: %d\t", property->playable);
+				printf("Title: %s\n", property->title);
+				printf("\t##Artist: %s\t", property->artist);
+				printf("Album: %s\t", property->album);
+				printf("Genre: %s\n", property->genre);
+				printf("\t##Track #%d\t\t", property->number);
+				printf("duration: %d ms\n", property->duration);
+			}
 		}
 		node = node->next_item;
 	}
@@ -208,16 +233,21 @@ static void prv_list_items(char *buffer, void *user_data)
 static void prv_change_folder(char *buffer, void *user_data)
 {
 	artik_error ret = S_OK;
-	char *folder = malloc(strlen(buffer));
+	char *index = malloc(strlen(buffer));
+	int i = -1;
 
-	strncpy(folder, buffer, strlen(buffer));
-	folder[strlen(buffer) - 1] = '\0';
+	strncpy(index, buffer, strlen(buffer));
+	index[strlen(buffer) - 1] = '\0';
 
-	printf("Invoke change folder...%s\n", buffer);
-	ret = bt->avrcp_controller_change_folder(folder);
-	free(folder);
-	if (ret != S_OK)
-		printf("avrcp change folder failed !\n");
+	i = index_to_int(index);
+	free(index);
+	if (i >= 0) {
+		printf("Invoke change folder...%d\n", i);
+		ret = bt->avrcp_controller_change_folder(i);
+		if (ret != S_OK)
+			printf("avrcp change folder failed !\n");
+	} else
+		printf("Please Input valid parameter!\n");
 }
 
 static void prv_get_repeat_mode(char *buffer, void *user_data)
@@ -272,29 +302,38 @@ static void prv_set_repeat_mode(char *buffer, void *user_data)
 static void prv_play_item(char *buffer, void *user_data)
 {
 	artik_error ret = S_OK;
-	char *item = malloc(strlen(buffer));
+	char *index = malloc(strlen(buffer));
+	int i = -1;
 
-	strncpy(item, buffer, strlen(buffer));
-	item[strlen(buffer) - 1] = '\0';
-	ret = bt->avrcp_controller_play_item(item);
-	free(item);
-
-	if (ret != S_OK)
-		printf("avrcp play_item failed !\n");
+	strncpy(index, buffer, strlen(buffer));
+	index[strlen(buffer) - 1] = '\0';
+	i = index_to_int(index);
+	free(index);
+	if (i >= 0) {
+		ret = bt->avrcp_controller_play_item(i);
+		if (ret != S_OK)
+			printf("avrcp play_item failed !\n");
+	} else
+		printf("Please Input valid parameter!\n");
 }
 
 static void prv_add_to_playing(char *buffer, void *user_data)
 {
 	artik_error ret = S_OK;
-	char *item = malloc(strlen(buffer));
+	char *index = malloc(strlen(buffer));
+	int i = -1;
 
-	strncpy(item, buffer, strlen(buffer));
-	item[strlen(buffer) - 1] = '\0';
-	printf("add to playing item:%s\n", buffer);
-	ret = bt->avrcp_controller_add_to_playing(item);
-	free(item);
-	if (ret != S_OK)
-		printf("avrcp add_to_playing failed !\n");
+	strncpy(index, buffer, strlen(buffer));
+	index[strlen(buffer) - 1] = '\0';
+	i = index_to_int(index);
+	free(index);
+	if (i >= 0) {
+		printf("add to playing item:%d\n", i);
+		ret = bt->avrcp_controller_add_to_playing(i);
+		if (ret != S_OK)
+			printf("avrcp add_to_playing failed !\n");
+	} else
+		printf("Please Input valid parameter!\n");
 }
 
 static void prv_resume_play(char *buffer, void *user_data)
@@ -348,23 +387,20 @@ command_desc_t commands[] = {
 			"connect 54:40:AD:E2:BE:35", prv_connect, NULL},
 		{"disconnect", "Connect to certain device address.",
 			"disconnect 54:40:AD:E2:BE:35", prv_disconnect, NULL},
-		{"list-item", "List items of current folder.",
+		{"list-item", "List item indexs of current folder.",
 			"list-item or list-item 1 2", prv_list_items, NULL},
-		{"change-folder", "Change the folder.",
-			"change-folder /org/bluez/hci0/dev_54_40_AD_E2_BE_35/player0"\
-			"/Filesystem/item3/item1", prv_change_folder, NULL},
+		{"change-folder", "Change to the specified index folder",
+			"change-folder 0", prv_change_folder, NULL},
 		{"get-repeat", "Get the repeat mode", "get-repeat",
 			prv_get_repeat_mode, NULL},
 		{"set-repeat", "Set the repeat mode",
 			"set-repeat single/set-repeat all/set-repeat group/set-repeat off",
 			prv_set_repeat_mode, NULL},
-		{"play-item", "Play the item",
-			"play-item /org/bluez/hci0/dev_54_40_AD_E2_BE_35/player0/"\
-			"Filesystem/item3/item1/item1",
+		{"play-item", "Play the specified index of item",
+			"play-item 0",
 			prv_play_item, NULL},
-		{"addtoplay", "Add the item to playlist.",
-			"addtoplay /org/bluez/hci0/dev_54_40_AD_E2_BE_35/player0/"\
-			"Filesystem/item3/item1/item1",
+		{"addtoplay", "Add the specified index of item to playlist.",
+			"addtoplay 0",
 			prv_add_to_playing, NULL},
 		{"resume-play", "Resume play.", "resume-play", prv_resume_play, NULL},
 		{"next", "Play the next music.", "next", prv_next, NULL},

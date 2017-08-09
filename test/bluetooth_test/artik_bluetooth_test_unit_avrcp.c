@@ -31,15 +31,143 @@
 
 static char remote_mac_addr[BT_ADDRESS_SIZE];
 
+artik_error remote_info_get(void)
+{
+	int ret = 0;
+
+	fprintf(stdout, "remote device mac address: ");
+	ret = fscanf(stdin, "%s", remote_mac_addr);
+	if (ret == -1)
+		return E_BAD_ARGS;
+	if (strlen(remote_mac_addr) != BT_ADDRESS_LEN)
+		return E_BAD_ARGS;
+	fprintf(stdout, "remote address: %s-%zu\n",
+		remote_mac_addr, strlen(remote_mac_addr));
+	return S_OK;
+}
+void _on_connect(artik_bt_event event, void *data, void *user_data)
+{
+	artik_loop_module *loop = (artik_loop_module *)user_data;
+
+	loop->quit();
+}
+
+static int connect(void)
+{
+	int ret = 0;
+	artik_bluetooth_module *bt = NULL;
+	artik_loop_module *loop = NULL;
+
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	loop = (artik_loop_module *)artik_request_api_module("loop");
+
+	bt->set_callback(BT_EVENT_CONNECT, _on_connect, (void *)loop);
+	ret = bt->connect(remote_mac_addr);
+	artik_release_api_module(bt);
+	if (ret == S_OK) {
+		printf("Connect to device [%s] success\n", remote_mac_addr);
+		return 0;
+	}
+	printf("Connect to device [%s] failed\n", remote_mac_addr);
+	return -1;
+}
+
+static void disconnect(void)
+{
+	int ret = 0;
+	artik_bluetooth_module *bt = NULL;
+
+	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
+	ret = bt->disconnect(remote_mac_addr);
+	artik_release_api_module(bt);
+	if (ret == S_OK)
+		printf("Disconnect to device [%s] success\n", remote_mac_addr);
+	else
+		printf("Disconnect to device [%s] failed\n", remote_mac_addr);
+}
+
+static int list_item(void)
+{
+	int ret = 0;
+	char any_key[255];
+	int start_item = -1;
+	int end_item = -1;
+	int num = 0;
+	artik_bt_avrcp_item *item_list, *node;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
+
+	fprintf(stdout, "press any key to list item");
+	ret = fscanf(stdin, "%s", any_key);
+	printf("%s\n", any_key);
+
+	ret = bt->avrcp_controller_list_item(start_item, end_item, &item_list);
+	artik_release_api_module(bt);
+
+	if (ret != S_OK) {
+		printf("avrcp list item failed !\n");
+		return -1;
+	}
+
+	node = item_list;
+	while (node != NULL) {
+		artik_bt_avrcp_item_property *property = node->property;
+
+		if (property != NULL) {
+			printf("item_obj_path : %s\n", node->item_obj_path);
+			printf("#%d  Name: %s\n", num, property->name);
+			if (strncmp(property->type, "folder", strlen("folder") + 1) == 0) {
+				printf("\t##Folder: %s\n", property->folder);
+			} else {
+				printf("\t##Type: %s\t\t", property->type);
+				printf("Playable: %d\t", property->playable);
+				printf("Title: %s\n", property->title);
+				printf("\t##Artist: %s\t", property->artist);
+				printf("Album: %s\t", property->album);
+				printf("Genre: %s\n", property->genre);
+				printf("\t##Number of tracks: %d\t", property->number_of_tracks);
+				printf("track #%d\t", property->number);
+				printf("duration: %d ms\n", property->duration);
+			}
+		}
+		node = node->next_item;
+		num++;
+	}
+
+	return 0;
+}
+
 static int init_suite1(void)
 {
+	artik_error ret = S_OK;
+
 	printf("%s\n", __func__);
+	ret = remote_info_get();
+	if (ret != S_OK) {
+		fprintf(stdout, "remote info get error!\n");
+		return -1;
+	}
+
+	if (connect() != 0) {
+		fprintf(stdout, "connect error!\n");
+		return -1;
+	}
+
+	if (list_item() != 0) {
+		fprintf(stdout, "list_item error!\n");
+		goto error;
+	}
+
 	return 0;
+error:
+	disconnect();
+	return -1;
 }
 
 static int clean_suite1(void)
 {
 	printf("\nclean_suite1\n");
+	disconnect();
 	return 0;
 }
 
@@ -78,13 +206,12 @@ artik_error _item_search(artik_bt_avrcp_item **item,
 
 static void avrcp_is_connected_test(void)
 {
-	artik_error ret = S_OK;
-	bool connected;
+	bool connected = false;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 
-	ret = bt->avrcp_controller_is_connected(&connected);
-	CU_ASSERT(ret == S_OK);
+	connected = bt->avrcp_controller_is_connected();
+	CU_ASSERT(connected == true);
 
 	artik_release_api_module(bt);
 }
@@ -125,24 +252,24 @@ static void avrcp_list_item_test(void)
 static void avrcp_change_folder_test(void)
 {
 	artik_error ret = S_OK;
-	const char *test_folder_path = "test_folder";
-	const char *song_path_name = "/Filesystem/SONGS";
 	const char *type_folder = "folder";
 	artik_bt_avrcp_item *item = NULL;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 
-	ret = bt->avrcp_controller_change_folder(test_folder_path);
-	CU_ASSERT(ret != S_OK);
+	ret = bt->avrcp_controller_change_folder(99999);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
-	ret = _item_search(&item, song_path_name, type_folder);
+	ret = bt->avrcp_controller_change_folder(-1);
+	CU_ASSERT(ret == E_BAD_ARGS);
+
+	ret = _item_search(&item, NULL, type_folder);
 	CU_ASSERT(ret == S_OK);
 
-	if (item == NULL)
-		fprintf(stdout, "no suitable item\n");
-	else
-		ret = bt->avrcp_controller_change_folder(item->item_obj_path);
-	CU_ASSERT(ret == S_OK);
+	if (item) {
+		ret = bt->avrcp_controller_change_folder(item->index);
+		CU_ASSERT(ret == S_OK);
+	}
 
 	artik_release_api_module(bt);
 }
@@ -150,7 +277,6 @@ static void avrcp_change_folder_test(void)
 static void avrcp_play_item_test(void)
 {
 	artik_error ret = S_OK;
-	const char *test_item_path = "test_path";
 	const char *type_audio = "audio";
 	artik_bt_avrcp_item *item = NULL;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
@@ -159,10 +285,13 @@ static void avrcp_play_item_test(void)
 	ret = _item_search(&item, NULL, type_audio);
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item((char *)test_item_path);
-	CU_ASSERT(ret != S_OK);
+	ret = bt->avrcp_controller_play_item(-1);
+	CU_ASSERT(ret == E_BAD_ARGS);
+	ret = bt->avrcp_controller_play_item(99999);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_stop();
@@ -185,7 +314,7 @@ static void avrcp_pause_test(void)
 	ret = bt->avrcp_controller_pause();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_pause();
@@ -211,7 +340,7 @@ static void avrcp_resume_play_test(void)
 	ret = bt->avrcp_controller_resume_play();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_pause();
@@ -240,7 +369,7 @@ static void avrcp_stop_test(void)
 	ret = bt->avrcp_controller_stop();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_stop();
@@ -263,7 +392,7 @@ static void avrcp_next_test(void)
 	ret = bt->avrcp_controller_next();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_next();
@@ -289,7 +418,7 @@ static void avrcp_previous_test(void)
 	ret = bt->avrcp_controller_previous();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_previous();
@@ -315,7 +444,7 @@ static void avrcp_fast_forward_test(void)
 	ret = bt->avrcp_controller_fast_forward();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_fast_forward();
@@ -341,7 +470,7 @@ static void avrcp_rewind_test(void)
 	ret = bt->avrcp_controller_rewind();
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_play_item(item->item_obj_path);
+	ret = bt->avrcp_controller_play_item(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->avrcp_controller_rewind();
@@ -393,7 +522,6 @@ static void avrcp_set_repeat_mode_test(void)
 static void avrcp_add_to_playing_test(void)
 {
 	artik_error ret = S_OK;
-	const char *test_item_path = "test_path";
 	const char *type_audio = "audio";
 	artik_bt_avrcp_item *item = NULL;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
@@ -402,10 +530,12 @@ static void avrcp_add_to_playing_test(void)
 	ret = _item_search(&item, NULL, type_audio);
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->avrcp_controller_add_to_playing((char *)test_item_path);
-	CU_ASSERT(ret != S_OK);
+	ret = bt->avrcp_controller_add_to_playing(-1);
+	CU_ASSERT(ret == E_BAD_ARGS);
+	ret = bt->avrcp_controller_add_to_playing(99999);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
-	ret = bt->avrcp_controller_add_to_playing(item->item_obj_path);
+	ret = bt->avrcp_controller_add_to_playing(item->index);
 	CU_ASSERT(ret == S_OK);
 
 	artik_release_api_module(bt);
@@ -414,22 +544,15 @@ static void avrcp_add_to_playing_test(void)
 static void avrcp_get_property_test(void)
 {
 	artik_error ret = S_OK;
-	const char *test_item_path = "test_path";
-	const char *type_audio = "audio";
-	artik_bt_avrcp_item *item = NULL;
 	artik_bt_avrcp_item_property *ut_property = NULL;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 
-	ret = _item_search(&item, NULL, type_audio);
-	CU_ASSERT(ret == S_OK);
-
-	ret = bt->avrcp_controller_get_property(
-		(char *)test_item_path, &ut_property);
-	CU_ASSERT(ret != S_OK);
-
-	ret = bt->avrcp_controller_get_property(
-		item->item_obj_path, &ut_property);
+	ret = bt->avrcp_controller_get_property(-1, &ut_property);
+	CU_ASSERT(ret == E_BAD_ARGS);
+	ret = bt->avrcp_controller_get_property(99999, &ut_property);
+	CU_ASSERT(ret == E_BAD_ARGS);
+	ret = bt->avrcp_controller_get_property(0, &ut_property);
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(ut_property != NULL);
 
@@ -495,13 +618,12 @@ static void avrcp_get_type_test(void)
 
 static void avrcp_get_browsable_test(void)
 {
-	artik_error ret = S_OK;
-	bool ut_browsable;
+	bool ut_browsable = false;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 
-	ret = bt->avrcp_controller_get_browsable(&ut_browsable);
-	CU_ASSERT(ret == S_OK);
+	ut_browsable = bt->avrcp_controller_is_browsable();
+	CU_ASSERT(ut_browsable == true);
 
 	artik_release_api_module(bt);
 }
@@ -587,22 +709,6 @@ artik_error cunit_init(CU_pSuite *psuite)
 	return ret;
 }
 
-artik_error remote_info_get(void)
-{
-	int ret = 0;
-
-	fprintf(stdout, "remote device mac address: ");
-	ret = fscanf(stdin, "%s", remote_mac_addr);
-	if (ret == -1)
-		return E_BAD_ARGS;
-	if (strlen(remote_mac_addr) != BT_ADDRESS_LEN)
-		return E_BAD_ARGS;
-	fprintf(stdout, "remote address: %s-%zu\n",
-		remote_mac_addr, strlen(remote_mac_addr));
-
-	return S_OK;
-}
-
 int main(void)
 {
 	artik_error ret = S_OK;
@@ -621,12 +727,6 @@ int main(void)
 		goto loop_quit;
 	}
 	fprintf(stdout, "cunit init success!\n");
-
-	ret = remote_info_get();
-	if (ret != S_OK) {
-		fprintf(stdout, "remote info get error!\n");
-		goto loop_quit;
-	}
 
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();

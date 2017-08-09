@@ -27,6 +27,9 @@
 artik_error bt_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data);
 
+artik_error bt_set_callbacks(artik_bt_callback_property *user_callbacks,
+	unsigned int size);
+
 artik_error bt_unset_callback(artik_bt_event event);
 
 #endif /* __ARTIK_BT_H */

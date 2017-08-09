@@ -62,9 +62,9 @@ static artik_error _pan_init(void)
 static void on_connect(artik_bt_event event, void *data, void *user_data)
 {
 	artik_loop_module *loop = (artik_loop_module *)user_data;
-	bool connected = *(bool *)data;
+	artik_bt_device dev = *(artik_bt_device *)data;
 
-	if (connected)
+	if (dev.is_connected)
 		connect_status = S_OK;
 	else
 		connect_status = E_BT_ERROR;
@@ -178,15 +178,15 @@ static void pan_get_connected_test(void)
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
 
-	ret = bt->pan_get_connected(&connected);
-	CU_ASSERT(ret != S_OK);
+	connected = bt->pan_is_connected();
+	CU_ASSERT(connected == false);
 
 	ret = _pan_start_connect();
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(connect_status == S_OK);
 
-	ret = bt->pan_get_connected(&connected);
-	CU_ASSERT(ret == S_OK);
+	connected = bt->pan_is_connected();
+	CU_ASSERT(connected == true);
 
 	ret = bt->pan_disconnect();
 	CU_ASSERT(ret == S_OK);

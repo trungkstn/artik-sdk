@@ -22,139 +22,128 @@
 #include <stdio.h>
 #include <signal.h>
 
+#define TEST_SERVICE "00001800-aaaa-1000-8000-00805f9b34fb"
+#define TEST_CHARACTERISTIC "00002a00-aaaa-1000-8000-00805f9b34fb"
+#define TEST_DESCRIPTOR "00002901-aaaa-1000-8000-00805f9b34fb"
+
 static artik_bluetooth_module *bt;
 static artik_loop_module *loop;
-static char remote_address[18];
-
-#define SERVICE_IMMEDIATE_ALERT "00001802-0000-1000-8000-00805f9b34fb"
-#define CHAR_ALERT_LEVEL "00002a06-0000-1000-8000-00805f9b34fb"
-#define CHAR_BATTERY_LEVEL "00002a19-0000-1000-8000-00805f9b34fb"
+static char addr[18];
+static int MAX_DATA_LEN = 10;
 
 static void on_scan(artik_bt_event event, void *data, void *user_data)
 {
-	int i;
 	artik_bt_device dev = *(artik_bt_device *)data;
 
-	fprintf(stdout, "found: %s\n", dev.remote_address);
+	printf("> found: %s [%s]\n", dev.remote_name, dev.remote_address);
+	for (int i = 0; i < dev.uuid_length; i++)
+		printf("%s [%s]\n", dev.uuid_list[i].uuid, dev.uuid_list[i].uuid_name);
+	printf("RSSI: %d dB\n", dev.rssi);
 
-	for (i = 0; i < dev.uuid_length; i++) {
-		if (strcmp(dev.uuid_list[i].uuid, SERVICE_IMMEDIATE_ALERT) == 0) {
-			fprintf(stdout, "found: %s [%s]\n",
-				dev.uuid_list[i].uuid_name, dev.uuid_list[i].uuid);
+	strcpy(addr, dev.remote_address);
 
-			strcpy(remote_address, dev.remote_address);
-			bt->stop_scan();
-			bt->connect(remote_address);
-			break;
-		}
-	}
+	printf("> stop scan\n");
+	bt->stop_scan();
+
+	printf("> connect to %s\n", addr);
+	bt->connect(addr);
 }
 
 static void on_connect(artik_bt_event event, void *data, void *user_data)
 {
-	fprintf(stdout, "%s connect: %s\n",
-		__func__, *(bool *)data ? "true" : "false");
+	artik_bt_device d = *(artik_bt_device *)data;
 
-	if (!(*(bool *)data))
-		return;
+	if (d.is_connected)
+		printf("> %s [%s] is connected\n", d.remote_name, d.remote_address);
+	else {
+		printf("> %s [%s] is disconnected\n", d.remote_name, d.remote_address);
+		loop->quit();
+	}
 }
 
-static void on_gatt_property(artik_bt_event event, void *data, void *user_data)
+static void on_service_resolved(artik_bt_event event, void *data, void *user_data)
 {
-	artik_bt_gatt_char_properties prop;
+	artik_bt_gatt_char_properties prop1;
+	unsigned char byte[3] = {0xff, 0xff, 0xff};
+	unsigned char *b;
+	int i, len;
 
-	fprintf(stdout, "%s\n", __func__);
+	printf("> %s\n", __func__);
 
-	if (bt->gatt_get_char_properties(remote_address, SERVICE_IMMEDIATE_ALERT, CHAR_ALERT_LEVEL,
-			&prop) == 0) {
-		fprintf(stdout, "immediate Alert characteristic Properties: [\n");
-
-		if (prop & BT_GATT_CHAR_PROPERTY_BROADCAST)
-			fprintf(stdout, "Broadcast\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_READ)
-			fprintf(stdout, "Read\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_WRITE_NO_RESPONSE)
-			fprintf(stdout, "Write Without Response\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_WRITE)
-			fprintf(stdout, "Write\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_NOTIFY)
-			fprintf(stdout, "Notify\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_INDICATE)
-			fprintf(stdout, "Indicate\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_SIGNED_WRITE)
-			fprintf(stdout, "Authenticated Signed Writes\n");
-		fprintf(stdout, "]\n");
-	} else {
-		fprintf(stdout, "no alert level characteristic\n");
-	}
-
-	if (bt->gatt_get_char_properties(remote_address, SERVICE_IMMEDIATE_ALERT, CHAR_BATTERY_LEVEL,
-			&prop) == 0) {
-		fprintf(stdout, "battery level characteristic Properties: [\n");
-		if (prop & BT_GATT_CHAR_PROPERTY_NOTIFY) {
-			fprintf(stdout, "Notify\n");
-			bt->gatt_start_notify(remote_address, SERVICE_IMMEDIATE_ALERT, CHAR_BATTERY_LEVEL);
+	if (bt->gatt_get_char_properties(addr, TEST_SERVICE, TEST_CHARACTERISTIC,
+			&prop1) == 0) {
+		if (prop1 & BT_GATT_CHAR_PROPERTY_WRITE) {
+			printf("> Write\n");
+			bt->gatt_char_write_value(addr, TEST_SERVICE, TEST_CHARACTERISTIC,
+					byte, 3);
 		}
-		fprintf(stdout, "]\n");
-	} else {
-		fprintf(stdout, "no battery level characteristic\n");
+
+		if (prop1 & BT_GATT_CHAR_PROPERTY_READ) {
+			printf("> Read\n");
+			bt->gatt_char_read_value(addr, TEST_SERVICE,
+					TEST_CHARACTERISTIC, &b, &len);
+			for (i = 0; i < len; i++)
+				printf("> characteristic value[%d]: 0x%02X\n", i, b[i]);
+
+			bt->gatt_desc_read_value(addr, TEST_SERVICE,
+					TEST_CHARACTERISTIC, TEST_DESCRIPTOR, &b, &len);
+			printf("> descriptor value: ");
+			for (i = 0; i < len; i++)
+				printf("%c", b[i]);
+			printf("\n");
+		}
+
+		if (prop1 & BT_GATT_CHAR_PROPERTY_NOTIFY) {
+			printf("> Notify\n");
+			bt->gatt_start_notify(addr, TEST_SERVICE, TEST_CHARACTERISTIC);
+		}
 	}
 }
 
-static void on_received(artik_bt_event event, void *data, void *user_data)
+static void on_notify(artik_bt_event event, void *data, void *user_data)
 {
-	int i = 0;
 	artik_bt_gatt_data d = *(artik_bt_gatt_data *)data;
 
-	if (strcasecmp(d.char_uuid, CHAR_BATTERY_LEVEL) != 0)
+	if (strcasecmp(d.char_uuid, TEST_CHARACTERISTIC) != 0)
 		return;
 
-	fprintf(stdout, "received %dbytes: ", d.length);
-	for (i = 0; i < d.length; i++)
-		fprintf(stdout, "0x%02X", d.bytes[i]);
-	fprintf(stdout, "\n");
+	if (d.length > MAX_DATA_LEN) {
+		loop->quit();
+		return;
+	}
+
+	if (d.length > 0) {
+		printf("> received %dbytes: ", d.length);
+		for (int i = 0; i < d.length; i++)
+			printf("0x%02X ", d.bytes[i]);
+		printf("\n");
+	}
 }
 
 static void set_user_callbacks(void)
 {
 	bt->set_callback(BT_EVENT_SCAN, on_scan, NULL);
 	bt->set_callback(BT_EVENT_CONNECT, on_connect, NULL);
-	bt->set_callback(BT_EVENT_GATT_PROPERTY, on_gatt_property, NULL);
-	bt->set_callback(BT_EVENT_PF_CUSTOM, on_received, NULL);
-}
-
-static void on_timeout_callback(void *user_data)
-{
-	fprintf(stdout, "%s exiting loop\n", __func__);
-	if (bt->is_connected(remote_address)) {
-		fprintf(stdout, "disconnect %s\n", remote_address);
-		bt->disconnect(remote_address);
-	}
-	loop->quit();
+	bt->set_callback(BT_EVENT_SERVICE_RESOLVED, on_service_resolved, NULL);
+	bt->set_callback(BT_EVENT_GATT_CHARACTERISTIC, on_notify, NULL);
 }
 
 static int on_signal(void *user_data)
 {
+	printf("> SIGINT!\n");
 	loop->quit();
-
 	return true;
 }
 
 int main(int argc, char *argv[])
 {
-	int id = 0;
-	artik_bt_scan_filter filter = {
-		.type = 0,
-		.uuid_list = NULL,
-		.uuid_length = 0,
-		.rssi = -100
-	};
+	artik_bt_scan_filter filter = {0};
 
 	filter.type = BT_SCAN_LE;
 	filter.uuid_length = 1;
 	filter.uuid_list = (artik_bt_uuid *)malloc(
 			sizeof(artik_bt_uuid) * filter.uuid_length);
-	filter.uuid_list[0].uuid = SERVICE_IMMEDIATE_ALERT;
+	filter.uuid_list[0].uuid = TEST_SERVICE;
 	filter.rssi = -90;
 
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
@@ -162,24 +151,22 @@ int main(int argc, char *argv[])
 
 	set_user_callbacks();
 
-	fprintf(stdout, "this application was tested with HTC FETCH\n");
-	fprintf(stdout, "start scan\n");
+	printf("> start scan\n");
 
 	bt->remove_devices();
-	artik_error err = bt->set_scan_filter(&filter);
-
-	if (err != S_OK) {
-		printf("TEST: failed to set the device discovery filter [%d]\n", err);
-		return -1;
-	}
-
+	bt->set_scan_filter(&filter);
 	bt->start_scan();
 
-	loop->add_timeout_callback(&id, 50000, on_timeout_callback, NULL);
 	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
 	loop->run();
 
+	bt->gatt_stop_notify(addr, TEST_SERVICE, TEST_CHARACTERISTIC);
+	bt->disconnect(addr);
+
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
+
+	free(filter.uuid_list);
+
 	return 0;
 }

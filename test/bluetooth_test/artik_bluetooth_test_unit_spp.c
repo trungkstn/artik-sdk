@@ -109,7 +109,8 @@ static void spp_unregister_profile_test(void)
 	artik_release_api_module(bt);
 }
 
-static void release_handler(void *user_data)
+static void on_spp_release(artik_bt_event event,
+		void *data, void *user_data)
 {
 	artik_loop_module *loop = (artik_loop_module *)user_data;
 
@@ -117,9 +118,8 @@ static void release_handler(void *user_data)
 	loop->quit();
 }
 
-static void new_connection_handler(char *device_path,
-		int fd, int version,
-		int features, void *user_data)
+static void on_spp_connect(artik_bt_event event,
+		void *data, void *user_data)
 {
 	artik_loop_module *loop = (artik_loop_module *)user_data;
 
@@ -127,8 +127,8 @@ static void new_connection_handler(char *device_path,
 	loop->quit();
 }
 
-static void request_disconnect_handler(char *device_path,
-		void *user_data)
+static void on_spp_disconnect(artik_bt_event event,
+		void *data, void *user_data)
 {
 	artik_loop_module *loop = (artik_loop_module *)user_data;
 
@@ -169,11 +169,13 @@ static void spp_set_callback_test(void)
 	ret = bt->spp_register_profile(&profile_option);
 	CU_ASSERT(ret == S_OK);
 
-	ret = bt->spp_set_callback(
-		release_handler,
-		new_connection_handler,
-		request_disconnect_handler,
-		(void *)loop);
+	artik_bt_callback_property spp_callback[] = {
+		{BT_EVENT_SPP_CONNECT, on_spp_connect, (void *)loop},
+		{BT_EVENT_SPP_RELEASE, on_spp_release, (void *)loop},
+		{BT_EVENT_SPP_DISCONNECT, on_spp_disconnect, (void *)loop}
+	};
+
+	ret = bt->set_callbacks(spp_callback, 3);
 	CU_ASSERT(ret == S_OK);
 
 	ret = bt->connect(remote_mac_addr);

@@ -157,10 +157,10 @@ static void test_get_devices(void)
 	artik_bt_device *devices = NULL;
 	int device_num = 0;
 
-	ret = bt->get_devices(&devices, &device_num);
+	ret = bt->get_devices(BT_DEVICE_ALL, &devices, &device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 
-	ret = bt->free_devices(devices, device_num);
+	ret = bt->free_devices(&devices, device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 }
 
@@ -169,10 +169,10 @@ static void test_get_paired_devices(void)
 	artik_bt_device *devices = NULL;
 	int device_num = 0;
 
-	ret = bt->get_paired_devices(&devices, &device_num);
+	ret = bt->get_devices(BT_DEVICE_PARIED, &devices, &device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 
-	ret = bt->free_devices(devices, device_num);
+	ret = bt->free_devices(&devices, device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 }
 
@@ -181,10 +181,10 @@ static void test_get_connected_devices(void)
 	artik_bt_device *devices = NULL;
 	int device_num = 0;
 
-	ret = bt->get_connected_devices(&devices, &device_num);
+	ret = bt->get_devices(BT_DEVICE_CONNECTED, &devices, &device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 
-	ret = bt->free_devices(devices, device_num);
+	ret = bt->free_devices(&devices, device_num);
 	CU_ASSERT_EQUAL(ret, S_OK);
 }
 

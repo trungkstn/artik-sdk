@@ -30,7 +30,7 @@ artik_error bt_pan_unregister(const char *uuid);
 artik_error bt_pan_connect(const char *mac_addr,
 	const char *uuid, char **network_interface);
 artik_error bt_pan_disconnect(void);
-artik_error bt_pan_get_connected(bool *connected);
+bool bt_pan_is_connected(void);
 artik_error bt_pan_get_interface(char **_interface);
 artik_error bt_pan_get_UUID(char **uuid);
 

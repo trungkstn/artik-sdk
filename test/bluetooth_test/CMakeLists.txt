@@ -29,7 +29,6 @@ SET( TESTS
 	advertiser
 	observer
 	gatt_client
-	gatt_client_rw
 	agent
 	gatt_server
 	hrp_collector
@@ -42,6 +41,7 @@ SET( TESTS
 	unit_nap
 	unit_panu
 	ibeacon
+	pxp_monitor
 )
 
 FOREACH ( test ${TESTS})

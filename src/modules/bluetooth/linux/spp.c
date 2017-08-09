@@ -50,13 +50,11 @@ static const gchar _introspection_xml[] = "<node>"
 static GDBusNodeInfo *_introspection_data;
 static guint registration_id;
 
-artik_bt_spp_server *_spp_server;
-
 static void _handle_release(void)
 {
 	/* do the release work, such as: (1) quit the mainloop ... */
-	if (_spp_server->release_func)
-		_spp_server->release_func(_spp_server->user_data);
+
+	_user_callback(BT_EVENT_SPP_RELEASE, NULL);
 }
 
 static void _handle_new_connection(GVariant *parameters,
@@ -74,6 +72,8 @@ static void _handle_new_connection(GVariant *parameters,
 	GUnixFDList *fd_list = NULL;
 	GError *error = NULL;
 	gint version = 0, features = 0;
+	gchar *address = NULL;
+	artik_bt_spp_connect_property spp_property = {0};
 
 	g_variant_get(parameters, "(&oh@a{sv})", &device_path, &fd_handler,
 			&g_property);
@@ -98,33 +98,32 @@ static void _handle_new_connection(GVariant *parameters,
 	if (value)
 		g_variant_unref(value);
 
-	if (_spp_server->connect_func) {
-		gchar *address;
+	_get_device_address(device_path, &address);
 
-		_get_device_address(device_path, &address);
-		_spp_server->connect_func(address, fd, version, features,
-			_spp_server->user_data);
-		g_free(address);
-	}
+	spp_property.device_addr = address;
+	spp_property.fd = fd;
+	spp_property.version = version;
+	spp_property.features = features;
 
+	_user_callback(BT_EVENT_SPP_CONNECT, (void *)(&spp_property));
+
+	g_free(address);
 	g_free(device_path);
 }
 
 static void _handle_request_disconnection(GVariant *parameters,
 		GDBusMethodInvocation *invocation) {
 	gchar *device_path = NULL;
+	gchar *address = NULL;
 
 	g_variant_get(parameters, "(o)", &device_path);
+
 	/* return the path, and release the socket */
-	if (_spp_server->disconnect_func) {
-		gchar *address = NULL;
+	_get_device_address(device_path, &address);
 
-		_get_device_address(device_path, &address);
-		_spp_server->disconnect_func(device_path,
-			_spp_server->user_data);
-		g_free(address);
-	}
+	_user_callback(BT_EVENT_SPP_DISCONNECT, (void *)address);
 
+	g_free(address);
 	g_free(device_path);
 }
 
@@ -172,14 +171,6 @@ static int _register_spp_object(void)
 	g_hash_table_insert(hci.registration_ids, g_strdup("ObjectRegistered"),
 			GUINT_TO_POINTER(registration_id));
 
-	if (!_spp_server) {
-		_spp_server = (artik_bt_spp_server *) malloc(
-				sizeof(artik_bt_spp_server));
-		if (_spp_server)
-			memset(_spp_server, 0, sizeof(artik_bt_spp_server));
-		else
-			return E_NO_MEM;
-	}
 	return S_OK;
 }
 
@@ -271,24 +262,6 @@ artik_error bt_spp_unregister_profile(void)
 	if (status != TRUE)
 		return E_BT_ERROR;
 
-	if (_spp_server) {
-		free(_spp_server);
-		_spp_server = NULL;
-	}
-
 	return S_OK;
 }
 
-artik_error bt_spp_set_callback(release_callback release_func,
-		new_connection_callback connect_func,
-		request_disconnect_callback disconnect_func,
-		void *user_data) {
-	if (_spp_server != NULL) {
-		_spp_server->release_func = release_func;
-		_spp_server->connect_func = connect_func;
-		_spp_server->disconnect_func = disconnect_func;
-		_spp_server->user_data = user_data;
-		return S_OK;
-	}
-	return E_INVALID_VALUE;
-}

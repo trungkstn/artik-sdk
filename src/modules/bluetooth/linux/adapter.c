@@ -295,32 +295,6 @@ bool bt_is_scanning(void)
 	return b;
 }
 
-artik_error bt_get_device_property(const char *addr, const char *property, char **value)
-{
-	GVariant *v, *tuple;
-	GError *e = NULL;
-	artik_error ret = S_OK;
-	gchar *path = NULL;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
-	_get_object_path(addr, &path);
-
-	tuple = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
-		path, DBUS_IF_PROPERTIES, "Get",
-		g_variant_new("(ss)", DBUS_IF_DEVICE1, property),
-		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
-
-	ret = bt_check_error(e);
-	if (ret != S_OK)
-		return ret;
-
-	g_variant_get(tuple, "(v)", &v);
-	g_variant_get(v, "s", value);
-
-	return S_OK;
-}
-
 artik_error bt_get_adapter_info(artik_bt_adapter *adapter)
 {
 	GVariant *r, *v;

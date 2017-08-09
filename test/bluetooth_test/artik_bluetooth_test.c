@@ -118,29 +118,29 @@ static artik_error test_bluetooth_devices(void)
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 
 	fprintf(stdout, "TEST: %s - list devices\n", __func__);
-	ret = bt->get_devices(&devices, &num);
+	ret = bt->get_devices(BT_DEVICE_ALL, &devices, &num);
 	if (ret != S_OK)
 		goto exit;
 	print_devices(devices, num);
-	bt->free_devices(devices, num);
+	bt->free_devices(&devices, num);
 	devices = NULL;
 	num = 0;
 
 	fprintf(stdout, "TEST: %s - list paired devices\n", __func__);
-	ret = bt->get_paired_devices(&devices, &num);
+	ret = bt->get_devices(BT_DEVICE_PARIED, &devices, &num);
 	if (ret != S_OK)
 		goto exit;
 	print_devices(devices, num);
-	bt->free_devices(devices, num);
+	bt->free_devices(&devices, num);
 	devices = NULL;
 	num = 0;
 
 	fprintf(stdout, "TEST: %s - list connected devices\n", __func__);
-	ret = bt->get_connected_devices(&devices, &num);
+	ret = bt->get_devices(BT_DEVICE_CONNECTED, &devices, &num);
 	if (ret != S_OK)
 		goto exit;
 	print_devices(devices, num);
-	bt->free_devices(devices, num);
+	bt->free_devices(&devices, num);
 	devices = NULL;
 	num = 0;
 
@@ -149,7 +149,7 @@ exit:
 		(ret == S_OK) ? "succeeded" : "failed");
 
 	if (devices && (num > 0))
-		bt->free_devices(devices, num);
+		bt->free_devices(&devices, num);
 
 	return ret;
 }
@@ -170,18 +170,18 @@ static void on_scan(void *data, void *user_data)
 static void on_bond(void *data, void *user_data)
 {
 	char *remote_address = (char *)user_data;
-	bool paired = *(bool *)data;
+	artik_bt_device dev = *(artik_bt_device *)data;
 
-	fprintf(stdout, "%s %s\n", __func__, paired ? "Paired" : "UnPaired");
+	fprintf(stdout, "%s %s\n", __func__, dev.is_bonded ? "Paired" : "UnPaired");
 	bt->connect(remote_address);
 }
 
 static void on_connect(void *data, void *user_data)
 {
-	bool connected = *(bool *)data;
+	artik_bt_device dev = *(artik_bt_device *)data;
 
 	fprintf(stdout, "%s %s\n", __func__,
-		connected ? "Connected" : "Disconnected");
+		dev.is_connected ? "Connected" : "Disconnected");
 }
 
 static void on_proximity(void *data, void *user_data)
@@ -282,7 +282,7 @@ static artik_error test_bluetooth_disconnect_devices(void)
 		goto exit;
 
 	fprintf(stdout, "TEST: %s - remove connected devices\n", __func__);
-	ret = bt->get_connected_devices(&devices, &num);
+	ret = bt->get_devices(BT_DEVICE_CONNECTED, &devices, &num);
 	if (ret != S_OK)
 		goto exit;
 
@@ -292,12 +292,12 @@ static artik_error test_bluetooth_disconnect_devices(void)
 			goto exit;
 	}
 
-	bt->free_devices(devices, num);
+	bt->free_devices(&devices, num);
 	devices = NULL;
 	num = 0;
 
 	fprintf(stdout, "TEST: %s - remove paired devices\n", __func__);
-	ret = bt->get_paired_devices(&devices, &num);
+	ret = bt->get_devices(BT_DEVICE_PARIED, &devices, &num);
 	if (ret != S_OK)
 		goto exit;
 
@@ -307,7 +307,7 @@ static artik_error test_bluetooth_disconnect_devices(void)
 			goto exit;
 	}
 
-	bt->free_devices(devices, num);
+	bt->free_devices(&devices, num);
 	devices = NULL;
 	num = 0;
 

@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-artik_error bt_avrcp_controller_change_folder(const char *folder);
+artik_error bt_avrcp_controller_change_folder(int index);
 
 artik_error bt_avrcp_controller_list_item(int start_item, int end_item,
 		artik_bt_avrcp_item **item_list);
@@ -35,7 +35,7 @@ artik_error bt_avrcp_controller_set_repeat(const char *repeat_mode);
 
 artik_error bt_avrcp_controller_get_repeat(char **repeat_mode);
 
-artik_error bt_avrcp_controller_is_connected(bool *is_connected);
+bool bt_avrcp_controller_is_connected(void);
 artik_error bt_avrcp_controller_resume_play(void);
 artik_error bt_avrcp_controller_pause(void);
 artik_error bt_avrcp_controller_stop(void);
@@ -43,15 +43,15 @@ artik_error bt_avrcp_controller_next(void);
 artik_error bt_avrcp_controller_previous(void);
 artik_error bt_avrcp_controller_fast_forward(void);
 artik_error bt_avrcp_controller_rewind(void);
-artik_error bt_avrcp_controller_get_property(char *item,
+artik_error bt_avrcp_controller_get_property(int index,
 				artik_bt_avrcp_item_property **properties);
-artik_error bt_avrcp_controller_play_item(char *item);
-artik_error bt_avrcp_controller_add_to_playing(char *item);
+artik_error bt_avrcp_controller_play_item(int index);
+artik_error bt_avrcp_controller_add_to_playing(int index);
 artik_error bt_avrcp_controller_get_name(char **name);
 artik_error bt_avrcp_controller_get_status(char **status);
 artik_error bt_avrcp_controller_get_subtype(char **sub_type);
 artik_error bt_avrcp_controller_get_type(char **type);
-artik_error bt_avrcp_controller_get_browsable(bool *is_browsable);
+bool bt_avrcp_controller_is_browsable(void);
 artik_error bt_avrcp_controller_get_position(unsigned int *position);
 #ifdef __cplusplus
 }

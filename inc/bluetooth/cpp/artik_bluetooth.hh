@@ -44,17 +44,19 @@ class Bluetooth {
 
   artik_error start_scan();
   artik_error stop_scan();
-  artik_error get_devices(artik_bt_device **devices, int *num_devices);
-  artik_error get_paired_devices(artik_bt_device **devices, int *num_devices);
-  artik_error get_connected_devices(artik_bt_device **devices,
-      int *num_devices);
+  artik_error get_device(const char *addr, artik_bt_device *device);
+  artik_error get_devices(artik_bt_device_type device_type,
+      artik_bt_device **devices, int *num_devices);
   artik_error start_bond(const char* addr);
   artik_error stop_bond(const char* addr);
   artik_error connect(const char* addr);
   artik_error disconnect(const char* addr);
-  artik_error free_devices(artik_bt_device *device_list, int count);
+  artik_error free_device(artik_bt_device *device);
+  artik_error free_devices(artik_bt_device **device_list, int count);
   artik_error set_callback(artik_bt_event event,
       artik_bt_callback user_callback, void *user_data);
+  artik_error set_callbacks(artik_bt_callback_property *user_callbacks,
+      unsigned int size);
   artik_error unset_callback(artik_bt_event event);
   artik_error remove_unpaired_devices();
   artik_error remove_device(const char *remote_address);
@@ -65,8 +67,6 @@ class Bluetooth {
   artik_error set_pairableTimeout(unsigned int timeout);
   artik_error set_discoverableTimeout(unsigned int timeout);
   bool is_scanning(void);
-  artik_error get_device_property(const char *addr, const char *property,
-    char **value);
   artik_error get_adapter_info(artik_bt_adapter *adapter);
   artik_error remove_devices(void);
   artik_error connect_profile(const char *addr, const char *uuid);
@@ -74,7 +74,6 @@ class Bluetooth {
   artik_error unset_trust(const char *addr);
   artik_error set_block(const char *addr);
   artik_error unset_block(const char *addr);
-  artik_error free_device(artik_bt_device *device);
   bool is_paired(const char *addr);
   bool is_connected(const char *addr);
   bool is_trusted(const char *addr);
@@ -126,13 +125,13 @@ class Bluetooth {
         artik_bt_gatt_req_state_type state, const char *err_msg);
   artik_error gatt_notify(int svc_id, int char_id, unsigned char *byte,
       int len);
-  artik_error avrcp_controller_change_folder(const char* folder);
+  artik_error avrcp_controller_change_folder(int index);
   artik_error avrcp_controller_list_item(int start_item, int end_item,
        artik_bt_avrcp_item **item_list);
   artik_error avrcp_controller_get_repeat_mode(
       artik_bt_avrcp_repeat_mode *repeat_mode);
   artik_error avrcp_controller_set_repeat_mode(artik_bt_avrcp_repeat_mode mode);
-  artik_error avrcp_controller_is_connected(bool *is_connected);
+  bool avrcp_controller_is_connected(void);
   artik_error avrcp_controller_resume_play();
   artik_error avrcp_controller_pause();
   artik_error avrcp_controller_stop();
@@ -140,31 +139,26 @@ class Bluetooth {
   artik_error avrcp_controller_previous();
   artik_error avrcp_controller_fast_forward();
   artik_error avrcp_controller_rewind();
-  artik_error avrcp_controller_get_property(char *item,
+  artik_error avrcp_controller_get_property(int index,
       artik_bt_avrcp_item_property **properties);
-  artik_error avrcp_controller_play_item(char *item);
-  artik_error avrcp_controller_add_to_playing(char *item);
+  artik_error avrcp_controller_play_item(int index);
+  artik_error avrcp_controller_add_to_playing(int index);
   artik_error avrcp_controller_get_name(char **name);
   artik_error avrcp_controller_get_status(char **status);
   artik_error avrcp_controller_get_subtype(char **subtype);
   artik_error avrcp_controller_get_type(char **type);
-  artik_error avrcp_controller_get_browsable(bool *browsable);
+  bool avrcp_controller_is_browsable(void);
   artik_error avrcp_controller_get_position(unsigned int *position);
   artik_error pan_register(const char *uuid, const char *bridge);
   artik_error pan_unregister(const char *uuid);
   artik_error pan_connect(const char *mac_addr, const char *uuid,
       char **network_interface);
   artik_error pan_disconnect();
-  artik_error pan_get_connected(bool *connected);
+  bool pan_is_connected(void);
   artik_error pan_get_interface(char **interface);
   artik_error pan_get_UUID(char **uuid);
   artik_error spp_register_profile(artik_bt_spp_profile_option *opt);
   artik_error spp_unregister_profile();
-  artik_error spp_set_callback(
-    release_callback relase_func,
-    new_connection_callback connect_func,
-    request_disconnect_callback disconnect_func,
-    void *user_data);
   artik_error ftp_create_session(char *dest_addr);
   artik_error ftp_remove_session();
   artik_error ftp_change_folder(char *folder);
@@ -178,7 +172,6 @@ class Bluetooth {
   artik_error agent_register_capability(artik_bt_agent_capability e);
   artik_error agent_set_default();
   artik_error agent_unregister();
-  artik_error agent_set_callback(artik_bt_agent_callbacks *agent_callback);
   artik_error agent_send_pincode(artik_bt_agent_request_handle handle,
       char *pincode);
   artik_error agent_send_passkey(artik_bt_agent_request_handle handle,

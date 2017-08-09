@@ -41,86 +41,120 @@ static void ask(char *prompt)
 		fprintf(stdout, "\ncmd fgets error\n");
 }
 
-static void m_request_pincode(artik_bt_agent_request_handle handle, char *device, void *user_data)
+void callback_on_request_pincode(artik_bt_event event,
+	void *data, void *user_data)
 {
-	printf("Request pincode (%s)\n", device);
-	artik_bluetooth_module *bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
 
+	fprintf(stdout, "<AGENT>: Request pincode (%s)\n",
+		request_property->device);
 	ask("Enter PIN Code: ");
 
-	bt->agent_send_pincode(handle, buffer);
+	bt->agent_send_pincode(request_property->handle, buffer);
+
 	artik_release_api_module(bt);
 }
 
-static void m_request_passkey(artik_bt_agent_request_handle handle, char *device, void *user_data)
+void callback_on_display_pincode(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_pincode_property *pincode_property =
+		(artik_bt_agent_pincode_property *)data;
+
+	fprintf(stdout, "<AGENT>: Pincode %s\n", pincode_property->pincode);
+}
+
+void callback_on_request_passkey(artik_bt_event event,
+	void *data, void *user_data)
 {
 	unsigned int passkey;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
 
-	printf("Request passkey (%s)\n", device);
+	fprintf(stdout, "<AGENT>: Request passkey (%s)\n",
+		request_property->device);
 	ask("Enter passkey (1~999999): ");
-	if (sscanf(buffer, "%u", &passkey) == 1)
-		bt->agent_send_passkey(handle, passkey);
+	if (sscanf(buffer, "%u", &passkey) > 0)
+		bt->agent_send_passkey(request_property->handle, passkey);
+	else
+		fprintf(stdout, "<AGENT>: get passkey error\n");
 
 	artik_release_api_module(bt);
 }
 
-static void m_request_confirmation(artik_bt_agent_request_handle handle, char *device, unsigned int passkey,
-		void *user_data)
+void callback_on_display_passkey(artik_bt_event event,
+	void *data, void *user_data)
 {
-	printf("Request confirmation (%s)\nPasskey: %06u\n", device, passkey);
-	artik_bluetooth_module *bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	artik_bt_agent_passkey_property *passkey_property =
+		(artik_bt_agent_passkey_property *)data;
+
+	fprintf(stdout, "<AGENT>: Passkey %06u\n", passkey_property->passkey);
+}
+
+void callback_on_confirmation(artik_bt_event event,
+	void *data, void *user_data)
+{
+	artik_bt_agent_confirmation_property *confirmation_property =
+		(artik_bt_agent_confirmation_property *)data;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
+
+	fprintf(stdout, "<AGENT>: Request confirmation (%s)\nPasskey: %06u\n",
+		confirmation_property->device, confirmation_property->passkey);
 
 	ask("Confirm passkey? (yes/no): ");
 	if (!strncmp(buffer, "yes", 3))
-		bt->agent_send_empty_response(handle);
+		bt->agent_send_empty_response(confirmation_property->handle);
 	else
-		bt->agent_send_error(handle, BT_AGENT_REQUEST_REJECTED, "");
+		bt->agent_send_error(confirmation_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
 
 	artik_release_api_module(bt);
 }
 
-static void m_request_authorization(artik_bt_agent_request_handle handle, char *device, void *user_data)
+void callback_on_authorization(artik_bt_event event,
+	void *data, void *user_data)
 {
-	printf("Request authorization (%s)\n", device);
-	artik_bluetooth_module *bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	artik_bt_agent_request_property *request_property =
+		(artik_bt_agent_request_property *)data;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
 
+	fprintf(stdout, "<AGENT>: Request authorization (%s)\n",
+		request_property->device);
 	ask("Authorize? (yes/no): ");
 	if (!strncmp(buffer, "yes", 3))
-		bt->agent_send_empty_response(handle);
+		bt->agent_send_empty_response(request_property->handle);
 	else
-		bt->agent_send_error(handle, BT_AGENT_REQUEST_REJECTED, "");
+		bt->agent_send_error(request_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
 
 	artik_release_api_module(bt);
 }
 
-static void m_authorize_service(artik_bt_agent_request_handle handle, char *device, char *uuid, void *user_data)
+void callback_on_authorize_service(artik_bt_event event,
+	void *data, void *user_data)
 {
-	printf("Authorize Service (%s, %s)\n", device, uuid);
-	artik_bluetooth_module *bt = (artik_bluetooth_module *) artik_request_api_module("bluetooth");
+	artik_bt_agent_authorize_property *authorize_property =
+		(artik_bt_agent_authorize_property *)data;
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+		artik_request_api_module("bluetooth");
 
+	fprintf(stdout, "<AGENT>: Authorize Service (%s, %s)\n",
+		authorize_property->device, authorize_property->uuid);
 	ask("Authorize connection? (yes/no): ");
 	if (!strncmp(buffer, "yes", 3))
-		bt->agent_send_empty_response(handle);
+		bt->agent_send_empty_response(authorize_property->handle);
 	else
-		bt->agent_send_error(handle, BT_AGENT_REQUEST_REJECTED, "");
+		bt->agent_send_error(authorize_property->handle,
+			BT_AGENT_REQUEST_REJECTED, "");
 
 	artik_release_api_module(bt);
-}
-
-static int uninit(void *user_data)
-{
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-				artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-			artik_request_api_module("loop");
-	printf("Get module bluetooth success !\n");
-
-	printf("Invoke unregister...\n");
-	bt->agent_unregister();
-	loop->quit();
-
-	return true;
 }
 
 static artik_error test_bluetooth_agent(void)
@@ -130,29 +164,55 @@ static artik_error test_bluetooth_agent(void)
 			artik_request_api_module("bluetooth");
 	artik_loop_module *loop = (artik_loop_module *)
 			artik_request_api_module("loop");
-	artik_bt_agent_callbacks *m_callback =
-		(artik_bt_agent_callbacks *)malloc(sizeof(artik_bt_agent_callbacks));
 
-	memset(m_callback, 0, sizeof(artik_bt_agent_callbacks));
-	m_callback->authorize_service_func = m_authorize_service;
-	m_callback->request_authorization_func = m_request_authorization;
-	m_callback->request_confirmation_func = m_request_confirmation;
-	m_callback->request_passkey_func = m_request_passkey;
-	m_callback->request_pincode_func = m_request_pincode;
+	artik_bt_callback_property agent_callback[] = {
+		{BT_EVENT_AGENT_REQUEST_PINCODE, callback_on_request_pincode, NULL},
+		{BT_EVENT_AGENT_DISPLAY_PINCODE, callback_on_display_pincode, NULL},
+		{BT_EVENT_AGENT_REQUEST_PASSKEY, callback_on_request_passkey, NULL},
+		{BT_EVENT_AGENT_DISPLAY_PASSKEY, callback_on_display_passkey, NULL},
+		{BT_EVENT_AGENT_CONFIRM, callback_on_confirmation, NULL},
+		{BT_EVENT_AGENT_AUTHOREZE, callback_on_authorization, NULL},
+		{BT_EVENT_AGENT_AUTHOREZE_SERVICE, callback_on_authorize_service, NULL}
+	};
 
-	bt->set_discoverable(true);
+	ret = bt->set_callbacks(agent_callback, 7);
+	if (ret != S_OK)
+		goto exit;
 
-	printf("Invoke register...\n");
-	bt->agent_set_callback(m_callback);
-	bt->agent_register_capability(g_capa);
-	bt->agent_set_default();
-	loop->add_signal_watch(SIGINT, uninit, NULL, NULL);
+	ret = bt->set_discoverable(true);
+	if (ret != S_OK)
+		goto exit;
+
+	ret = bt->agent_register_capability(g_capa);
+	if (ret != S_OK)
+		goto exit;
+
+	ret = bt->agent_set_default();
+	if (ret != S_OK)
+		goto exit;
+
 	loop->run();
+
+exit:
+	artik_release_api_module(loop);
+	artik_release_api_module(bt);
+	return ret;
+}
+
+void uninit(int signal)
+{
+	artik_bluetooth_module *bt = (artik_bluetooth_module *)
+			artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+			artik_request_api_module("loop");
+	printf("Get module bluetooth success !\n");
+
+	printf("Invoke unregister...\n");
+	bt->agent_unregister();
+	loop->quit();
 
 	artik_release_api_module(loop);
 	artik_release_api_module(bt);
-	free(m_callback);
-	return ret;
 }
 
 int main(int argc, char *argv[])

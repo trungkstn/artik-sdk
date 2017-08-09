@@ -33,7 +33,8 @@
 
 #define OBEXD_CHECK_CMD     "ps -ax | grep obexd |grep -v grep"
 #define OBEXD_CMD           "obexd"
-#define OBEXD_START_CMD     "/usr/libexec/bluetooth/obexd"
+#define OBEXD_START_CMD_F   "/usr/libexec/bluetooth/obexd"
+#define OBEXD_START_CMD_U   "/usr/lib/bluetooth/obexd"
 #define OBEXD_DESTROY_CMD   "pkill -9 obexd"
 
 #define OBEXD_WATI_TIME 2
@@ -126,6 +127,38 @@ static artik_error _check_status(void)
 	return S_OK;
 }
 
+static void _change_property_status(const char *status)
+{
+	if (transfer_property.status)
+		free(transfer_property.status);
+	transfer_property.status = (char *) malloc(strlen(status) + 1);
+	strncpy(transfer_property.status, status, strlen(status));
+	transfer_property.status[strlen(status)] = '\0';
+}
+
+void _ftp_internal_callback(artik_bt_event event, void *data, void *user_data)
+{
+	if (!g_strcmp0(transfer_property.status, "complete")
+		|| !g_strcmp0(transfer_property.status, "error")) {
+		g_free(transfer_property.object_path);
+		transfer_property.object_path = NULL;
+	}
+
+	if (ftp_state == BT_FTP_STATE_CANCELED ||
+		ftp_state == BT_FTP_STATE_SUSPENDED)
+		return;
+
+	if (ftp_state == BT_FTP_STATE_CANCELING) {
+		transfer_property.transfered = 0;
+		_change_property_status("canceling");
+	}
+
+	if (!g_strcmp0(transfer_property.status, "suspended"))
+		ftp_state = BT_FTP_STATE_SUSPENDED;
+
+	_user_callback(BT_EVENT_FTP, &transfer_property);
+}
+
 artik_error bt_ftp_create_session(char *dest_addr)
 {
 	GVariantBuilder *args = NULL;
@@ -136,7 +169,8 @@ artik_error bt_ftp_create_session(char *dest_addr)
 	if (!dest_addr)
 		return E_BAD_ARGS;
 
-	if (S_OK != (_call_exe(OBEXD_START_CMD))) {
+	if (S_OK != (_call_exe(OBEXD_START_CMD_F)) &&
+		S_OK != (_call_exe(OBEXD_START_CMD_U))) {
 		log_dbg("Start obexd faild!\n");
 		return E_BT_ERROR;
 	}
@@ -160,6 +194,7 @@ artik_error bt_ftp_create_session(char *dest_addr)
 		g_variant_get(result, "(o)", &path);
 		strncpy(session_path, path, strlen(path));
 		session_path[strlen(path)] = '\0';
+		internal_callback[BT_EVENT_FTP].fn = _ftp_internal_callback;
 		return S_OK;
 	}
 
@@ -515,10 +550,15 @@ static void _ftp_cancel_callback(GObject *source_object,
 		log_err("FTP cancel transport failed :%s\n", error->message);
 		g_clear_error(&error);
 		ftp_state = BT_FTP_STATE_ERROR;
+		_change_property_status("error");
 	} else {
 		ftp_state = BT_FTP_STATE_CANCELED;
+		transfer_property.transfered = 0;
+		transfer_property.size = 0;
+		_change_property_status("canceled");
 		ftp_req = BT_FTP_REQ_END;
 	}
+	_user_callback(BT_EVENT_FTP, &transfer_property);
 }
 
 static void _ftp_resume_callback(GObject *source_object,
@@ -532,6 +572,8 @@ static void _ftp_resume_callback(GObject *source_object,
 		log_err("FTP resume transport failed :%s\n", error->message);
 		g_clear_error(&error);
 		ftp_state = BT_FTP_STATE_ERROR;
+		_change_property_status("error");
+		_user_callback(BT_EVENT_FTP, &transfer_property);
 	} else {
 		if (ftp_req == BT_FTP_REQ_PUT
 			&& ftp_state == BT_FTP_STATE_CANCELING) {
@@ -559,8 +601,9 @@ static void _ftp_suspend_callback(GObject *source_object,
 		log_err("FTP suspend transport failed :%s\n", error->message);
 		g_clear_error(&error);
 		ftp_state = BT_FTP_STATE_ERROR;
-	} else
-		ftp_state = BT_FTP_STATE_SUSPENDED;
+		_change_property_status("error");
+		_user_callback(BT_EVENT_FTP, &transfer_property);
+	}
 }
 
 artik_error bt_ftp_resume_transfer(void)
@@ -631,7 +674,7 @@ artik_error bt_ftp_cancel_transfer(void)
 	bt_init(G_BUS_TYPE_SESSION, &(hci.session_conn));
 
 	if (ftp_req == BT_FTP_REQ_PUT
-		&& ftp_state == BT_FTP_STATE_SUSPENDED) {
+		&& ftp_state == BT_FTP_STATE_SUSPENDED)
 		g_dbus_connection_call(hci.session_conn,
 			DBUS_BLUEZ_OBEX_BUS,
 			transfer_property.object_path,
@@ -639,19 +682,19 @@ artik_error bt_ftp_cancel_transfer(void)
 			"Resume", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
 			G_MAXINT, NULL,
 			_ftp_resume_callback, NULL);
-		ftp_state = BT_FTP_STATE_CANCELING;
-		return S_OK;
-	}
-
-	g_dbus_connection_call(hci.session_conn,
-		DBUS_BLUEZ_OBEX_BUS,
-		transfer_property.object_path,
-		DBUS_IF_OBEX_TRANSFER,
-		"Cancel", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
-		G_MAXINT, NULL,
-		_ftp_cancel_callback, NULL);
+	else
+		g_dbus_connection_call(hci.session_conn,
+			DBUS_BLUEZ_OBEX_BUS,
+			transfer_property.object_path,
+			DBUS_IF_OBEX_TRANSFER,
+			"Cancel", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+			G_MAXINT, NULL,
+			_ftp_cancel_callback, NULL);
 
 	ftp_state = BT_FTP_STATE_CANCELING;
+	transfer_property.transfered = 0;
+	_change_property_status("canceling");
+	_user_callback(BT_EVENT_FTP, &transfer_property);
 
 	return S_OK;
 }

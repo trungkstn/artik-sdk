@@ -25,6 +25,7 @@
 #include <inttypes.h>
 
 bt_handler hci = {0};
+bt_event_callback internal_callback[BT_EVENT_END];
 char session_path[SESSION_PATH_LEN];
 artik_bt_ftp_property transfer_property = {0};
 
@@ -71,7 +72,7 @@ static void _on_gatt_data_received(GVariant *properties, gchar *srv_uuid, gchar 
 		data.bytes[i] = g_variant_get_byte(v1);
 	}
 
-	_user_callback(BT_EVENT_PF_CUSTOM, &data);
+	_user_callback(BT_EVENT_GATT_CHARACTERISTIC, &data);
 
 	g_variant_unref(prop);
 	g_variant_unref(v);
@@ -204,67 +205,45 @@ artik_error bt_deinit(void)
 
 void _user_callback(artik_bt_event event, void *data)
 {
-	void *user_data = NULL;
+	log_dbg("%s [%d]", __func__, event);
+
+	if ((event < 0) || (event >= BT_EVENT_END))
+		return;
 
 	if (hci.callback[event].fn == NULL)
 		return;
 
-	log_dbg("%s [%d]", __func__, event);
-
-	switch (event) {
-	case BT_EVENT_SCAN:
-		user_data = (artik_bt_device *)data;
-		break;
-	case BT_EVENT_BOND:
-	case BT_EVENT_CONNECT:
-		user_data = (gboolean *)data;
-		break;
-	case BT_EVENT_PROXIMITY:
-		user_data = (artik_bt_gatt_data *)data;
-		break;
-	case BT_EVENT_PF_HEARTRATE:
-		user_data = (artik_bt_hrp_data *)data;
-		break;
-	case BT_EVENT_FTP:
-		user_data = (artik_bt_ftp_property *)data;
-		break;
-	case BT_EVENT_GATT_PROPERTY:
-		break;
-	case BT_EVENT_PF_CUSTOM:
-		user_data = (artik_bt_gatt_data *)data;
-		break;
-	default:
-		break;
-	}
-
-	hci.callback[event].fn(event, user_data, hci.callback[event].data);
+	hci.callback[event].fn(event, data, hci.callback[event].user_data);
 }
 
-static void _device_properties_changed(GVariant *properties)
+static void _device_properties_changed(const gchar *path, GVariant *properties)
 {
 	GVariant *val;
 	GVariantIter *iter;
 	gchar *key;
-	gboolean connected = false;
-	gboolean paired = false;
 
 	g_variant_get(properties, "a{sv}", &iter);
 	while (g_variant_iter_loop(iter, "{&sv}", &key, &val)) {
+
+		log_dbg("%s key: %s, state: %d", __func__, key, hci.state);
+
 		if (g_strcmp0(key, "Connected") == 0) {
-			connected = g_variant_get_boolean(val);
+
 			if (hci.state == BT_DEVICE_STATE_IDLE)
-				_user_callback(BT_EVENT_CONNECT, &connected);
-			g_variant_unref(val);
-			break;
+				_process_connection_cb(path, BT_EVENT_CONNECT);
+			else if (hci.state == BT_DEVICE_STATE_PAIRING
+					&& !g_variant_get_boolean(val))
+				_process_connection_cb(path, BT_EVENT_BOND);
+
 		} else if (g_strcmp0(key, "Paired") == 0) {
-			paired = g_variant_get_boolean(val);
+
 			if (hci.state == BT_DEVICE_STATE_IDLE)
-				_user_callback(BT_EVENT_BOND, &paired);
-			g_variant_unref(val);
-			break;
-		} else if (g_strcmp0(key, "ServiceResolved") == 0) {
-			g_variant_unref(val);
-			break;
+				_process_connection_cb(path, BT_EVENT_BOND);
+
+		} else if (g_strcmp0(key, "ServicesResolved") == 0) {
+
+			if (hci.state == BT_DEVICE_STATE_IDLE && g_variant_get_boolean(val))
+				_process_service_cb(path, BT_EVENT_SERVICE_RESOLVED);
 		}
 	}
 
@@ -301,28 +280,21 @@ static void _obex_properties_changed(const char *object_path,
 
 	_fill_transfer_property(properties);
 
-	_user_callback(BT_EVENT_FTP, &transfer_property);
-
-	if (!g_strcmp0(transfer_property.status, "complete")
-		|| !g_strcmp0(transfer_property.status, "error")) {
-		g_free(transfer_property.object_path);
-		transfer_property.object_path = NULL;
-	}
+	internal_callback[BT_EVENT_FTP].fn(BT_EVENT_FTP, &transfer_property, NULL);
 }
 
-static void _pan_properties_changed(GVariant *properties)
+static void _pan_properties_changed(const gchar *path, GVariant *properties)
 {
 	GVariant *val;
 	GVariantIter *iter;
 	gchar *key;
-	gboolean connected = false;
 
 	g_variant_get(properties, "a{sv}", &iter);
 	while (g_variant_iter_loop(iter, "{&sv}", &key, &val)) {
 		if (g_strcmp0(key, "Connected") == 0) {
-			connected = g_variant_get_boolean(val);
-			log_dbg("_user_callback: %d\n", hci.state);
-			_user_callback(BT_EVENT_CONNECT, &connected);
+
+			_process_connection_cb(path, BT_EVENT_CONNECT);
+
 			g_variant_unref(val);
 			break;
 		}
@@ -736,9 +708,87 @@ void _get_gatt_uuid_list(const char *gatt_path, const char *interface,
 	g_variant_unref(obj1);
 }
 
+static artik_error _get_all_device_properties(const gchar *path, GVariant **v)
+{
+	GError *e = NULL;
+
+	log_dbg("%s %s", __func__, path);
+
+	*v = g_dbus_connection_call_sync(hci.conn,
+		DBUS_BLUEZ_BUS,
+		path,
+		DBUS_IF_PROPERTIES,
+		"GetAll",
+		g_variant_new("(s)", DBUS_IF_DEVICE1),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	return bt_check_error(e);
+}
+
 static void _process_gatt_service(gchar *path)
 {
 	/* TODO: process gatt service here */
+}
+
+void _process_connection_cb(const gchar *path, artik_bt_event e)
+{
+	GVariant *v1, *v2;
+	artik_bt_device d = {0};
+
+	log_dbg("%s %s, evt: %d", __func__, path, e);
+
+	if (!(e & (BT_EVENT_BOND | BT_EVENT_CONNECT)))
+		return;
+
+	hci.state = BT_DEVICE_STATE_IDLE;
+
+	if (_get_all_device_properties(path, &v1) == S_OK) {
+
+		v2 = g_variant_get_child_value(v1, 0);
+		_get_device_properties(v2, &d);
+
+		_user_callback(e, &d);
+
+		g_free(d.uuid_list);
+		g_free(d.manufacturer_data);
+		g_free(d.svc_data);
+
+		g_variant_unref(v1);
+		g_variant_unref(v2);
+	} else {
+		if (e == BT_EVENT_BOND)
+			d.is_bonded = false;
+		else if (e == BT_EVENT_CONNECT)
+			d.is_connected = false;
+
+		_user_callback(e, &d);
+	}
+}
+
+void _process_service_cb(const gchar *path, artik_bt_event e)
+{
+	GVariant *v1, *v2;
+	artik_bt_device d = {0};
+
+	log_dbg("%s %s, evt: %d", __func__, path, e);
+
+	if (!(e & BT_EVENT_SERVICE_RESOLVED))
+		return;
+
+	if (_get_all_device_properties(path, &v1) == S_OK) {
+
+		v2 = g_variant_get_child_value(v1, 0);
+		_get_device_properties(v2, &d);
+
+		_user_callback(e, &d);
+
+		g_free(d.uuid_list);
+		g_free(d.manufacturer_data);
+		g_free(d.svc_data);
+
+		g_variant_unref(v1);
+		g_variant_unref(v2);
+	}
 }
 
 static void _gatt_properties_changed(const gchar *object_path,
@@ -747,6 +797,24 @@ static void _gatt_properties_changed(const gchar *object_path,
 	GVariant *r, *v;
 	guint i = 0, len = 0;
 	bt_gatt_client *client;
+
+	log_dbg("%s path: %s", __func__, object_path);
+
+	r = g_dbus_connection_call_sync(
+			hci.conn,
+			DBUS_BLUEZ_BUS,
+			object_path,
+			DBUS_IF_PROPERTIES,
+			"Get",
+			g_variant_new("(ss)", DBUS_IF_GATTCHARACTERISTIC1, "Notifying"),
+			NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, NULL);
+
+	g_variant_get(r, "(v)", &v);
+	if (!g_variant_get_boolean(v)) {
+		g_variant_unref(r);
+		g_variant_unref(v);
+		return;
+	}
 
 	r = g_dbus_connection_call_sync(
 			hci.conn,
@@ -767,22 +835,14 @@ static void _gatt_properties_changed(const gchar *object_path,
 		for (i = 0; i < len; i++) {
 			client =  g_slist_nth_data(hci.gatt_clients, i);
 			if (g_strcmp0(object_path, client->path) == 0) {
-				_on_gatt_data_received(properties, client->srv_uuid, client->char_uuid);
+				_on_gatt_data_received(properties, client->srv_uuid,
+						client->char_uuid);
 				break;
 			}
 		}
 	}
 	g_variant_unref(r);
 	g_variant_unref(v);
-}
-
-static gboolean _on_timeout(gpointer user_data)
-{
-	gboolean b = true;
-
-	_user_callback(BT_EVENT_GATT_PROPERTY, &b);
-
-	return G_SOURCE_REMOVE;
 }
 
 void _on_interface_added(const gchar *sender_name,
@@ -806,16 +866,9 @@ void _on_interface_added(const gchar *sender_name,
 			_user_callback(BT_EVENT_SCAN, device);
 			bt_free_device(device);
 		} else if (g_strcmp0(interface, DBUS_IF_GATTSERVICE1) == 0) {
-			if (hci.source != NULL)
-				g_source_destroy(hci.source);
 
-			hci.source = g_timeout_source_new(30);
-			g_source_set_callback(hci.source, _on_timeout, NULL, NULL);
-			g_source_attach(hci.source, NULL);
-
-			/* TODO: DBUS_IF_GATTSERVICE1 handling */
 			_process_gatt_service(path);
-			log_dbg("[NEW] ftp added %s\n", path);
+
 		} else if (g_strcmp0(interface, DBUS_IF_OBEX_TRANSFER) == 0) {
 			if (transfer_property.object_path != NULL)
 				free(transfer_property.object_path);
@@ -901,7 +954,7 @@ void _on_properties_changed(const gchar *sender_name,
 		log_dbg("%s-interface: %s", __func__, interface);
 
 		if (g_strcmp0(DBUS_IF_DEVICE1, interface) == 0) {
-			_device_properties_changed(properties);
+			_device_properties_changed(object_path, properties);
 
 		} else if (g_strcmp0(DBUS_IF_PROXIMITYREPORTER1, interface) == 0 ||
 				g_strcmp0(DBUS_IF_PROXIMITYMONITOR1, interface) == 0) {
@@ -915,7 +968,7 @@ void _on_properties_changed(const gchar *sender_name,
 			_obex_properties_changed(object_path, properties);
 
 		} else if (g_strcmp0(DBUS_IF_NETWORK1, interface) == 0) {
-			_pan_properties_changed(properties);
+			_pan_properties_changed(object_path, properties);
 		}
 	} else if (g_str_has_prefix(object_path, GATT_SERVICE_PREFIX)) {
 		log_dbg("%s %s %s", __func__, object_path, interface_name);

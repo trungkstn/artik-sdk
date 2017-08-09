@@ -86,7 +86,7 @@ artik_error bt_remove_unpaired_devices(void)
 			bt_remove_device(device_list[i].remote_address);
 	}
 
-	bt_free_devices(device_list, count);
+	bt_free_devices(&device_list, count);
 
 	return S_OK;
 }
@@ -109,7 +109,7 @@ artik_error bt_remove_devices(void)
 	for (i = 0; i < count; i++)
 		bt_remove_device(device_list[i].remote_address);
 
-	bt_free_devices(device_list, count);
+	bt_free_devices(&device_list, count);
 
 	return S_OK;
 }
@@ -158,37 +158,26 @@ static void bt_bond_callback(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
-	gboolean paired = FALSE;
 	GError *error = NULL;
 
+	log_dbg("%s", __func__);
+
 	g_dbus_connection_call_finish(bus, res, &error);
-	if (error == NULL) {
-		paired = TRUE;
-		hci.state = BT_DEVICE_STATE_PAIRED;
-	} else {
-		hci.state = BT_DEVICE_STATE_IDLE;
+
+	if (error) {
 		log_err("Pair remote device failed :%s\n", error->message);
 		g_clear_error(&error);
 	}
-	/*If pair failed, user callback should also be invoked.*/
-	_user_callback(BT_EVENT_BOND, &paired);
 }
 
 artik_error bt_start_bond(const char *remote_address)
 {
 	gchar *path;
-	gboolean bonded = FALSE;
 
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (hci.state == BT_DEVICE_STATE_PAIRING)
 		return E_IN_PROGRESS;
-
-	if (hci.state == BT_DEVICE_STATE_PAIRED) {
-		bonded = TRUE;
-		_user_callback(BT_EVENT_BOND, &bonded);
-		return S_OK;
-	}
 
 	_get_object_path(remote_address, &path);
 
@@ -196,8 +185,7 @@ artik_error bt_start_bond(const char *remote_address)
 		return E_BT_ERROR;
 
 	if (_is_paired(path)) {
-		bonded = TRUE;
-		_user_callback(BT_EVENT_BOND, &bonded);
+		_process_connection_cb(path, BT_EVENT_BOND);
 		g_free(path);
 		return S_OK;
 	}
@@ -222,49 +210,38 @@ static void bt_connect_callback(GObject *source_object,
 		GAsyncResult *res, gpointer user_data)
 {
 	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
-	gboolean connected = FALSE;
 	GError *error = NULL;
 
+	_process_connection_cb((const gchar *)user_data, BT_EVENT_CONNECT);
+
 	g_dbus_connection_call_finish(bus, res, &error);
-	if (!error) {
-		connected = TRUE;
-		hci.state = BT_DEVICE_STATE_CONNECTED;
-	} else {
-		hci.state = BT_DEVICE_STATE_IDLE;
+
+	if (error) {
 		log_err("Connect remote device failed :%s\n", error->message);
 		g_clear_error(&error);
 	}
-	/*If connect failed, user callback should also be invoked.*/
-	_user_callback(BT_EVENT_CONNECT, &connected);
+
+	g_free(user_data);
 }
 
 artik_error bt_connect(const char *remote_address)
 {
 	gchar *path;
-	gboolean connected = FALSE;
 
-	log_dbg("");
+	log_dbg("%s %s", __func__, remote_address);
 
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
 
-	if (hci.state == BT_DEVICE_STATE_CONNECTED) {
-		connected = TRUE;
-		_user_callback(BT_EVENT_CONNECT, &connected);
-		return S_OK;
-	}
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
 		return E_BT_ERROR;
 
-	if (hci.state == BT_DEVICE_STATE_IDLE
-			&& _is_connected(path)) {
-		connected = TRUE;
-		_user_callback(BT_EVENT_CONNECT, &connected);
+	if (hci.state == BT_DEVICE_STATE_IDLE && _is_connected(path)) {
+		_process_connection_cb(path, BT_EVENT_CONNECT);
 		g_free(path);
 		return S_OK;
 	}
@@ -275,9 +252,10 @@ artik_error bt_connect(const char *remote_address)
 		DBUS_IF_DEVICE1,
 		"Connect",
 		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-		bt_connect_callback, NULL);
+		bt_connect_callback, g_strdup(path));
 
 	hci.state = BT_DEVICE_STATE_CONNECTING;
+
 	g_free(path);
 
 	return S_OK;
@@ -286,7 +264,6 @@ artik_error bt_connect(const char *remote_address)
 artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 {
 	gchar *path;
-	gboolean connected = FALSE;
 
 	log_dbg("%s[%s]", __func__, uuid);
 
@@ -295,21 +272,13 @@ artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 	if (hci.state == BT_DEVICE_STATE_CONNECTING)
 		return E_IN_PROGRESS;
 
-	if (hci.state == BT_DEVICE_STATE_CONNECTED) {
-		connected = TRUE;
-		_user_callback(BT_EVENT_CONNECT, &connected);
-		return S_OK;
-	}
-
 	_get_object_path(remote_address, &path);
 
 	if (path == NULL)
 		return E_BT_ERROR;
 
-	if (hci.state == BT_DEVICE_STATE_IDLE
-			&& _is_connected(path)) {
-		connected = TRUE;
-		_user_callback(BT_EVENT_CONNECT, &connected);
+	if (hci.state == BT_DEVICE_STATE_IDLE && _is_connected(path)) {
+		_process_connection_cb(path, BT_EVENT_CONNECT);
 		g_free(path);
 		return S_OK;
 	}
@@ -321,9 +290,10 @@ artik_error bt_connect_profile(const char *remote_address, const char *uuid)
 		"ConnectProfile",
 		g_variant_new("(s)", uuid),
 		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-		bt_connect_callback, NULL);
+		bt_connect_callback, g_strdup(path));
 
 	hci.state = BT_DEVICE_STATE_CONNECTING;
+
 	g_free(path);
 
 	return S_OK;
@@ -470,51 +440,64 @@ artik_error bt_unset_block(const char *remote_address)
 	return S_OK;
 }
 
-artik_error bt_get_devices(artik_bt_device **device_list, int *count)
+artik_error bt_get_device(const char *addr, artik_bt_device *device)
 {
-	int cnt = 0;
-	artik_bt_device *tmp_list;
+	GVariant *v1, *v2;
+	GError *e = NULL;
 	artik_error ret = S_OK;
+	gchar *path = NULL;
+
+	log_dbg("%s addr: %s", __func__, addr);
 
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
 
-	ret = _get_devices(BT_DEVICE_STATE_IDLE, &tmp_list, &cnt);
+	_get_object_path(addr, &path);
+
+	if (path == NULL)
+		return E_BT_ERROR;
+
+	v1 = g_dbus_connection_call_sync(hci.conn, DBUS_BLUEZ_BUS,
+		path, DBUS_IF_PROPERTIES, "GetAll",
+		g_variant_new("(s)", DBUS_IF_DEVICE1),
+		NULL, G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &e);
+
+	g_free(path);
+
+	ret = bt_check_error(e);
 	if (ret != S_OK)
 		return ret;
 
-	*count = cnt;
-	*device_list = tmp_list;
+	g_variant_get(v1, "(@a{sv})", &v2);
+	_get_device_properties(v2, device);
+
+	g_variant_unref(v1);
+	g_variant_unref(v2);
 
 	return S_OK;
 }
 
-artik_error bt_get_paired_devices(artik_bt_device **device_list, int *count)
+artik_error bt_get_devices(artik_bt_device_type device_type,
+	artik_bt_device **device_list, int *count)
 {
 	int cnt = 0;
 	artik_bt_device *tmp_list;
 	artik_error ret = S_OK;
 
 	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
-	ret = _get_devices(BT_DEVICE_STATE_PAIRED, &tmp_list, &cnt);
-	if (ret != S_OK)
-		return ret;
-
-	*count = cnt;
-	*device_list = tmp_list;
-
-	return S_OK;
-}
-
-artik_error bt_get_connected_devices(artik_bt_device **device_list, int *count)
-{
-	int cnt = 0;
-	artik_bt_device *tmp_list;
-	artik_error ret = S_OK;
-
-	bt_init(G_BUS_TYPE_SYSTEM, &(hci.conn));
-
-	ret = _get_devices(BT_DEVICE_STATE_CONNECTED, &tmp_list, &cnt);
+	switch (device_type) {
+	case BT_DEVICE_PARIED:
+		ret = _get_devices(BT_DEVICE_STATE_PAIRED, &tmp_list, &cnt);
+		break;
+	case BT_DEVICE_CONNECTED:
+		ret = _get_devices(BT_DEVICE_STATE_CONNECTED, &tmp_list, &cnt);
+		break;
+	case BT_DEVICE_ALL:
+		ret = _get_devices(BT_DEVICE_STATE_IDLE, &tmp_list, &cnt);
+		break;
+	default:
+		ret = E_INVALID_VALUE;
+		break;
+	}
 	if (ret != S_OK)
 		return ret;
 
@@ -526,41 +509,28 @@ artik_error bt_get_connected_devices(artik_bt_device **device_list, int *count)
 
 artik_error bt_free_device(artik_bt_device *device)
 {
-	gint i = 0;
-
-	if (device == NULL)
-		return S_OK;
-
-	if (device->uuid_length > 0) {
-		for (i = 0; i < device->uuid_length; i++) {
-			g_free(device->uuid_list[i].uuid);
-			g_free(device->uuid_list[i].uuid_name);
-		}
-
-		g_free(device->uuid_list);
-	}
-	g_free(device->remote_address);
-	g_free(device->remote_name);
-	g_free(device);
-
-	return S_OK;
+	return bt_free_devices(&device, 1);
 }
 
-artik_error bt_free_devices(artik_bt_device *device_list, int count)
+artik_error bt_free_devices(artik_bt_device **device_list, int count)
 {
 	int i = 0, j = 0;
 
+	if (*device_list == NULL)
+		return S_OK;
+
 	for (i = 0; i < count; i++) {
-		for (j = 0; j < device_list[i].uuid_length; j++) {
-			g_free(device_list[i].uuid_list[j].uuid);
-			g_free(device_list[i].uuid_list[j].uuid_name);
+		for (j = 0; j < (*device_list)[i].uuid_length; j++) {
+			g_free((*device_list)[i].uuid_list[j].uuid);
+			g_free((*device_list)[i].uuid_list[j].uuid_name);
 		}
 
-		g_free(device_list[i].uuid_list);
-		g_free(device_list[i].remote_address);
-		g_free(device_list[i].remote_name);
+		g_free((*device_list)[i].uuid_list);
+		g_free((*device_list)[i].remote_address);
+		g_free((*device_list)[i].remote_name);
 	}
-	g_free(device_list);
+	g_free(*device_list);
+	*device_list = NULL;
 
 	return S_OK;
 }

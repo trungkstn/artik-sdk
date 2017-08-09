@@ -94,7 +94,15 @@ static void on_scan(artik_bt_event event, void *data, void *user_data)
 
 static void on_connect(artik_bt_event event, void *data, void *user_data)
 {
-	fprintf(stdout, "%s %s\n", __func__, *(bool *)data ? "true" : "false");
+	artik_bt_device d = *(artik_bt_device *)data;
+
+	if (d.is_connected)
+		printf("> %s [%s] is connected\n", d.remote_name, d.remote_address);
+	else {
+		printf("> %s [%s] is disconnected\n", d.remote_name, d.remote_address);
+		loop->quit();
+	}
+
 	fprintf(stdout, "waiting for gatt properties\n");
 }
 
@@ -174,7 +182,7 @@ void set_user_callbacks(void)
 {
 	bt->set_callback(BT_EVENT_SCAN, on_scan, NULL);
 	bt->set_callback(BT_EVENT_CONNECT, on_connect, NULL);
-	bt->set_callback(BT_EVENT_GATT_PROPERTY, on_gatt_property, NULL);
+	bt->set_callback(BT_EVENT_SERVICE_RESOLVED, on_gatt_property, NULL);
 	bt->set_callback(BT_EVENT_PF_HEARTRATE, on_hr_received, NULL);
 }
 

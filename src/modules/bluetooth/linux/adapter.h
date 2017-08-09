@@ -34,8 +34,6 @@ artik_error bt_set_discoverableTimeout(unsigned int timeout);
 artik_error bt_start_scan(void);
 artik_error bt_stop_scan(void);
 bool bt_is_scanning(void);
-artik_error bt_get_device_property(const char *addr, const char *property,
-	char **value);
 artik_error bt_get_adapter_info(artik_bt_adapter *adapter);
 
 #ifdef __cplusplus

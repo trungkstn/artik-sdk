@@ -35,19 +35,14 @@ artik_error artik::Bluetooth::stop_scan() {
   return m_module->stop_scan();
 }
 
-artik_error artik::Bluetooth::get_devices(artik_bt_device **devices,
-    int *num_devices) {
-  return m_module->get_devices(devices, num_devices);
+artik_error artik::Bluetooth::get_device(const char *addr,
+    artik_bt_device *device) {
+  return m_module->get_device(addr, device);
 }
 
-artik_error artik::Bluetooth::get_paired_devices(artik_bt_device **devices,
-    int *num_devices) {
-  return m_module->get_paired_devices(devices, num_devices);
-}
-
-artik_error artik::Bluetooth::get_connected_devices(artik_bt_device **devices,
-    int *num_devices) {
-  return m_module->get_connected_devices(devices, num_devices);
+artik_error artik::Bluetooth::get_devices(artik_bt_device_type device_type,
+    artik_bt_device **devices, int *num_devices) {
+  return m_module->get_devices(device_type, devices, num_devices);
 }
 
 artik_error artik::Bluetooth::start_bond(const char* addr) {
@@ -66,7 +61,11 @@ artik_error artik::Bluetooth::disconnect(const char* addr) {
   return m_module->disconnect(addr);
 }
 
-artik_error artik::Bluetooth::free_devices(artik_bt_device *device_list,
+artik_error artik::Bluetooth::free_device(artik_bt_device *device) {
+  return m_module->free_device(device);
+}
+
+artik_error artik::Bluetooth::free_devices(artik_bt_device **device_list,
     int count) {
   return m_module->free_devices(device_list, count);
 }
@@ -74,6 +73,11 @@ artik_error artik::Bluetooth::free_devices(artik_bt_device *device_list,
 artik_error artik::Bluetooth::set_callback(artik_bt_event event,
     artik_bt_callback user_callback, void *user_data) {
   return m_module->set_callback(event, user_callback, user_data);
+}
+
+artik_error artik::Bluetooth::set_callbacks(artik_bt_callback_property
+    *user_callbacks, unsigned int size) {
+  return m_module->set_callbacks(user_callbacks, size);
 }
 
 artik_error artik::Bluetooth::unset_callback(artik_bt_event event) {
@@ -116,11 +120,6 @@ bool artik::Bluetooth::is_scanning(void) {
   return m_module->is_scanning();
 }
 
-artik_error artik::Bluetooth::get_device_property(const char *addr,
-    const char *property, char **value) {
-  return m_module->get_device_property(addr, property, value);
-}
-
 artik_error artik::Bluetooth::get_adapter_info(artik_bt_adapter *adapter) {
   return m_module->get_adapter_info(adapter);
 }
@@ -148,10 +147,6 @@ artik_error artik::Bluetooth::set_block(const char *addr) {
 
 artik_error artik::Bluetooth::unset_block(const char *addr) {
   return m_module->unset_block(addr);
-}
-
-artik_error artik::Bluetooth::free_device(artik_bt_device *device) {
-  return m_module->free_device(device);
 }
 
 bool artik::Bluetooth::is_paired(const char *addr) {
@@ -311,9 +306,8 @@ artik_error artik::Bluetooth::gatt_notify(int svc_id, int char_id,
   return m_module->gatt_notify(svc_id, char_id, byte, len);
 }
 
-artik_error artik::Bluetooth::avrcp_controller_change_folder(
-    const char* folder) {
-  return m_module->avrcp_controller_change_folder(folder);
+artik_error artik::Bluetooth::avrcp_controller_change_folder(int index) {
+  return m_module->avrcp_controller_change_folder(index);
 }
 
 artik_error artik::Bluetooth::avrcp_controller_list_item(int start_item,
@@ -331,9 +325,8 @@ artik_error artik::Bluetooth::avrcp_controller_set_repeat_mode(
   return m_module->avrcp_controller_set_repeat_mode(mode);
 }
 
-artik_error artik::Bluetooth::avrcp_controller_is_connected(
-    bool *is_connected) {
-  return m_module->avrcp_controller_is_connected(is_connected);
+bool artik::Bluetooth::avrcp_controller_is_connected(void) {
+  return m_module->avrcp_controller_is_connected();
 }
 
 artik_error artik::Bluetooth::avrcp_controller_resume_play() {
@@ -363,17 +356,18 @@ artik_error artik::Bluetooth::avrcp_controller_fast_forward() {
 artik_error artik::Bluetooth::avrcp_controller_rewind() {
   return m_module->avrcp_controller_rewind();
 }
-artik_error artik::Bluetooth::avrcp_controller_get_property(char *item,
-    artik_bt_avrcp_item_property **properties) {
-  return m_module->avrcp_controller_get_property(item, properties);
+
+artik_error artik::Bluetooth::avrcp_controller_get_property(
+    int index, artik_bt_avrcp_item_property **properties) {
+  return m_module->avrcp_controller_get_property(index, properties);
 }
 
-artik_error artik::Bluetooth::avrcp_controller_play_item(char *item) {
-  return m_module->avrcp_controller_play_item(item);
+artik_error artik::Bluetooth::avrcp_controller_play_item(int index) {
+  return m_module->avrcp_controller_play_item(index);
 }
 
-artik_error artik::Bluetooth::avrcp_controller_add_to_playing(char *item) {
-  return m_module->avrcp_controller_add_to_playing(item);
+artik_error artik::Bluetooth::avrcp_controller_add_to_playing(int index) {
+  return m_module->avrcp_controller_add_to_playing(index);
 }
 
 artik_error artik::Bluetooth::avrcp_controller_get_name(char **name) {
@@ -392,8 +386,8 @@ artik_error artik::Bluetooth::avrcp_controller_get_type(char **type) {
   return m_module->avrcp_controller_get_type(type);
 }
 
-artik_error artik::Bluetooth::avrcp_controller_get_browsable(bool *browsable) {
-  return m_module->avrcp_controller_get_browsable(browsable);
+bool artik::Bluetooth::avrcp_controller_is_browsable(void) {
+  return m_module->avrcp_controller_is_browsable();
 }
 
 artik_error artik::Bluetooth::avrcp_controller_get_position(
@@ -419,8 +413,8 @@ artik_error artik::Bluetooth::pan_disconnect() {
   return m_module->pan_disconnect();
 }
 
-artik_error artik::Bluetooth::pan_get_connected(bool *connected) {
-  return m_module->pan_get_connected(connected);
+bool artik::Bluetooth::pan_is_connected(void) {
+  return m_module->pan_is_connected();
 }
 
 artik_error artik::Bluetooth::pan_get_interface(char **interface) {
@@ -438,15 +432,6 @@ artik_error artik::Bluetooth::spp_register_profile(
 
 artik_error artik::Bluetooth::spp_unregister_profile() {
   return m_module->spp_unregister_profile();
-}
-
-artik_error artik::Bluetooth::spp_set_callback(
-  release_callback release_func,
-  new_connection_callback connect_func,
-  request_disconnect_callback disconnect_func,
-  void *user_data) {
-  return m_module->spp_set_callback(release_func, connect_func,
-      disconnect_func, user_data);
 }
 
 artik_error artik::Bluetooth::ftp_create_session(char *dest_addr) {
@@ -502,11 +487,6 @@ artik_error artik::Bluetooth::agent_set_default() {
 
 artik_error artik::Bluetooth::agent_unregister() {
   return m_module->agent_unregister();
-}
-
-artik_error artik::Bluetooth::agent_set_callback(
-    artik_bt_agent_callbacks *agent_callback) {
-  return m_module->agent_set_callback(agent_callback);
 }
 
 artik_error artik::Bluetooth::agent_send_pincode(

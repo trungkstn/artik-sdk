@@ -710,7 +710,7 @@ exit:
 	return ret;
 }
 
-artik_error bt_gatt_set_chr_on_read_request(int svc_id, int char_id,
+artik_error bt_gatt_set_char_on_read_request(int svc_id, int char_id,
 		artik_bt_gatt_req_read callback, void *user_data)
 {
 	bt_gatt_char *chr = _find_chr_list_by_id(svc_id, char_id);
@@ -724,7 +724,7 @@ artik_error bt_gatt_set_chr_on_read_request(int svc_id, int char_id,
 	return S_OK;
 }
 
-artik_error bt_gatt_set_chr_on_write_request(int svc_id, int char_id,
+artik_error bt_gatt_set_char_on_write_request(int svc_id, int char_id,
 		artik_bt_gatt_req_write callback, void *user_data)
 {
 	bt_gatt_char *chr = _find_chr_list_by_id(svc_id, char_id);
@@ -738,7 +738,7 @@ artik_error bt_gatt_set_chr_on_write_request(int svc_id, int char_id,
 	return S_OK;
 }
 
-artik_error bt_gatt_set_chr_on_notify_request(int svc_id, int char_id,
+artik_error bt_gatt_set_char_on_notify_request(int svc_id, int char_id,
 		artik_bt_gatt_req_notify callback, void *user_data)
 {
 	bt_gatt_char *chr = _find_chr_list_by_id(svc_id, char_id);

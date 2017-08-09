@@ -21,7 +21,6 @@
 #include "bt.h"
 #include "device.h"
 #include "gatt.h"
-#include "a2dp.h"
 #include "avrcp.h"
 #include "pan.h"
 #include "spp.h"
@@ -64,12 +63,6 @@ bool os_bt_is_scanning(void)
 	return bt_is_scanning();
 }
 
-artik_error os_bt_get_device_property(const char *path,
-		const char *property, char **value)
-{
-	return bt_get_device_property(path, property, value);
-}
-
 artik_error os_bt_get_adapter_info(artik_bt_adapter *adapter)
 {
 	return bt_get_adapter_info(adapter);
@@ -85,22 +78,15 @@ artik_error os_bt_stop_scan(void)
 	return bt_stop_scan();
 }
 
-artik_error os_bt_get_devices(artik_bt_device **devices,
-		int *num_devices)
+artik_error os_bt_get_device(const char *addr, artik_bt_device *device)
 {
-	return bt_get_devices(devices, num_devices);
+	return bt_get_device(addr, device);
 }
 
-artik_error os_bt_get_paired_devices(artik_bt_device **devices,
-		int *num_devices)
+artik_error os_bt_get_devices(artik_bt_device_type device_type,
+		artik_bt_device **devices, int *num_devices)
 {
-	return bt_get_paired_devices(devices, num_devices);
-}
-
-artik_error os_bt_get_connected_devices(artik_bt_device **devices,
-		int *num_devices)
-{
-	return bt_get_connected_devices(devices, num_devices);
+	return bt_get_devices(device_type, devices, num_devices);
 }
 
 artik_error os_bt_start_bond(const char *addr)
@@ -123,7 +109,12 @@ artik_error os_bt_disconnect(const char *addr)
 	return bt_disconnect(addr);
 }
 
-artik_error os_bt_free_devices(artik_bt_device *device_list, int count)
+artik_error os_bt_free_device(artik_bt_device *device)
+{
+	return bt_free_device(device);
+}
+
+artik_error os_bt_free_devices(artik_bt_device **device_list, int count)
 {
 	return bt_free_devices(device_list, count);
 }
@@ -132,6 +123,12 @@ artik_error os_bt_set_callback(artik_bt_event event,
 		artik_bt_callback user_callback, void *user_data)
 {
 	return bt_set_callback(event, user_callback, user_data);
+}
+
+artik_error os_bt_set_callbacks(artik_bt_callback_property
+		*user_callback, unsigned int size)
+{
+	return bt_set_callbacks(user_callback, size);
 }
 
 artik_error os_bt_unset_callback(artik_bt_event event)
@@ -179,11 +176,6 @@ artik_error os_bt_unset_block(const char *addr)
 	return bt_unset_block(addr);
 }
 
-artik_error os_bt_free_device(artik_bt_device *device)
-{
-	return bt_free_device(device);
-}
-
 bool os_bt_is_paired(const char *addr)
 {
 	return bt_is_paired(addr);
@@ -215,22 +207,22 @@ artik_error os_bt_gatt_add_characteristic(int svc_id, artik_bt_gatt_chr chr,
 	return bt_gatt_add_characteristic(svc_id, chr, id);
 }
 
-artik_error os_bt_gatt_set_chr_on_read_request(int svc_id, int char_id,
+artik_error os_bt_gatt_set_char_on_read_request(int svc_id, int char_id,
 		artik_bt_gatt_req_read callback, void *user_data)
 {
-	return bt_gatt_set_chr_on_read_request(svc_id, char_id, callback, user_data);
+	return bt_gatt_set_char_on_read_request(svc_id, char_id, callback, user_data);
 }
 
-artik_error os_bt_gatt_set_chr_on_write_request(int svc_id, int char_id,
+artik_error os_bt_gatt_set_char_on_write_request(int svc_id, int char_id,
 		artik_bt_gatt_req_write callback, void *user_data)
 {
-	return bt_gatt_set_chr_on_write_request(svc_id, char_id, callback, user_data);
+	return bt_gatt_set_char_on_write_request(svc_id, char_id, callback, user_data);
 }
 
-artik_error os_bt_gatt_set_chr_on_notify_request(int svc_id, int char_id,
+artik_error os_bt_gatt_set_char_on_notify_request(int svc_id, int char_id,
 		artik_bt_gatt_req_notify callback, void *user_data)
 {
-	return bt_gatt_set_chr_on_notify_request(svc_id, char_id, callback, user_data);
+	return bt_gatt_set_char_on_notify_request(svc_id, char_id, callback, user_data);
 }
 
 artik_error os_bt_gatt_add_descriptor(int service_id, int char_id,
@@ -349,46 +341,9 @@ artik_error os_bt_gatt_notify(int svc_id, int char_id, unsigned char *byte, int 
 	return bt_gatt_notify(svc_id, char_id, byte, len);
 }
 
-artik_error os_bt_a2dp_source_register(unsigned char codec,
-		bool delay_reporting, const char *path,
-		const unsigned char *capabilities, int cap_size)
+artik_error os_bt_avrcp_controller_change_folder(int index)
 {
-	return bt_a2dp_source_register(codec, delay_reporting,
-			path, capabilities, cap_size);
-}
-
-artik_error os_bt_a2dp_source_unregister(void)
-{
-	return bt_a2dp_source_unregister();
-}
-
-artik_error os_bt_a2dp_source_acquire(int *fd,
-		unsigned short *mtu_read, unsigned short *mtu_write)
-{
-	return bt_a2dp_source_acquire(fd, mtu_read, mtu_write);
-}
-
-artik_error os_bt_a2dp_source_get_properties(
-		artik_bt_a2dp_source_property * *properties)
-{
-	return bt_a2dp_source_get_properties(properties);
-}
-
-artik_error os_bt_a2dp_source_release(void)
-{
-	return bt_a2dp_source_release();
-}
-
-artik_error os_bt_a2dp_source_set_callback(select_config_callback select_func,
-		set_config_callback set_func,
-		clear_config_callback clear_func)
-{
-	return bt_a2dp_source_set_callback(select_func, set_func, clear_func);
-}
-
-artik_error os_bt_avrcp_controller_change_folder(const char *folder)
-{
-	return bt_avrcp_controller_change_folder(folder);
+	return bt_avrcp_controller_change_folder(index);
 }
 
 artik_error os_bt_avrcp_controller_list_item(int start_item, int end_item,
@@ -407,9 +362,9 @@ artik_error os_bt_avrcp_controller_set_repeat(const char *repeat_mode)
 	return bt_avrcp_controller_set_repeat(repeat_mode);
 }
 
-artik_error os_bt_avrcp_controller_is_connected(bool *is_connected)
+bool os_bt_avrcp_controller_is_connected(void)
 {
-	return bt_avrcp_controller_is_connected(is_connected);
+	return bt_avrcp_controller_is_connected();
 }
 
 artik_error os_bt_avrcp_controller_resume_play(void)
@@ -447,20 +402,20 @@ artik_error os_bt_avrcp_controller_rewind(void)
 	return bt_avrcp_controller_rewind();
 }
 
-artik_error os_bt_avrcp_controller_get_property(char *item,
+artik_error os_bt_avrcp_controller_get_property(int index,
 		artik_bt_avrcp_item_property **properties)
 {
-	return bt_avrcp_controller_get_property(item, properties);
+	return bt_avrcp_controller_get_property(index, properties);
 }
 
-artik_error os_bt_avrcp_controller_play_item(char *item)
+artik_error os_bt_avrcp_controller_play_item(int index)
 {
-	return bt_avrcp_controller_play_item(item);
+	return bt_avrcp_controller_play_item(index);
 }
 
-artik_error os_bt_avrcp_controller_add_to_playing(char *item)
+artik_error os_bt_avrcp_controller_add_to_playing(int index)
 {
-	return bt_avrcp_controller_add_to_playing(item);
+	return bt_avrcp_controller_add_to_playing(index);
 }
 
 artik_error os_bt_avrcp_controller_get_name(char **name)
@@ -483,9 +438,9 @@ artik_error os_bt_avrcp_controller_get_type(char **type)
 	return bt_avrcp_controller_get_type(type);
 }
 
-artik_error os_bt_avrcp_controller_get_browsable(bool *is_browsable)
+bool os_bt_avrcp_controller_is_browsable(void)
 {
-	return bt_avrcp_controller_get_browsable(is_browsable);
+	return bt_avrcp_controller_is_browsable();
 }
 
 artik_error os_bt_avrcp_controller_get_position(unsigned int *position)
@@ -514,9 +469,9 @@ artik_error os_bt_pan_disconnect(void)
 	return bt_pan_disconnect();
 }
 
-artik_error os_bt_pan_get_connected(bool *connected)
+bool os_bt_pan_is_connected(void)
 {
-	return bt_pan_get_connected(connected);
+	return bt_pan_is_connected();
 }
 
 artik_error os_bt_pan_get_interface(char **_interface)
@@ -537,14 +492,6 @@ artik_error os_bt_spp_register_profile(artik_bt_spp_profile_option *opt)
 artik_error os_bt_spp_unregister_profile(void)
 {
 	return bt_spp_unregister_profile();
-}
-
-artik_error os_bt_spp_set_callback(release_callback release_func,
-		new_connection_callback connect_func,
-		request_disconnect_callback disconnect_func,
-		void *user_data) {
-	return bt_spp_set_callback(release_func, connect_func, disconnect_func, user_data);
-
 }
 
 artik_error os_bt_ftp_create_session(char *dest_addr)
@@ -615,11 +562,6 @@ artik_error os_bt_agent_set_default(void)
 artik_error os_bt_agent_unregister(void)
 {
 	return bt_agent_unregister();
-}
-
-artik_error os_bt_agent_set_callback(artik_bt_agent_callbacks *agent_callback)
-{
-	return bt_agent_set_callback(agent_callback);
 }
 
 artik_error os_bt_agent_send_pincode(artik_bt_agent_request_handle handle, char *pincode)

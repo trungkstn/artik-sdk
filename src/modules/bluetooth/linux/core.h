@@ -194,7 +194,7 @@ typedef struct {
 
 typedef struct {
 	artik_bt_callback fn;
-	void *data;
+	void *user_data;
 } bt_event_callback;
 
 typedef struct {
@@ -212,7 +212,7 @@ typedef struct {
 } bt_handler;
 
 extern bt_handler hci;
-
+extern bt_event_callback internal_callback[BT_EVENT_END];
 extern char session_path[SESSION_PATH_LEN];
 extern artik_bt_ftp_property transfer_property;
 
@@ -265,6 +265,10 @@ gboolean _is_paired(const char *device_path);
 void _get_device_address(const gchar *path, gchar **address);
 
 artik_error bt_check_error(GError *err);
+
+void _process_connection_cb(const gchar *object_path, artik_bt_event e);
+
+void _process_service_cb(const gchar *path, artik_bt_event e);
 
 #ifdef __cplusplus
 }

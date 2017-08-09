@@ -26,7 +26,6 @@ extern "C" {
 artik_error bt_agent_register_capability(artik_bt_agent_capability e);
 artik_error bt_agent_set_default(void);
 artik_error bt_agent_unregister(void);
-artik_error bt_agent_set_callback(artik_bt_agent_callbacks *agent_callback);
 artik_error bt_agent_send_pincode(artik_bt_agent_request_handle handle, char *pincode);
 artik_error bt_agent_send_passkey(artik_bt_agent_request_handle handle, unsigned int passkey);
 artik_error bt_agent_send_error(artik_bt_agent_request_handle handle, artik_bt_agent_request_error e,

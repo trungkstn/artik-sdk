@@ -26,21 +26,9 @@
 extern "C" {
 #endif
 
-typedef struct {
-	release_callback release_func;
-	new_connection_callback connect_func;
-	request_disconnect_callback disconnect_func;
-	void *user_data;
-} artik_bt_spp_server;
-
 artik_error bt_spp_register_profile(artik_bt_spp_profile_option *opt);
 
 artik_error bt_spp_unregister_profile(void);
-
-artik_error bt_spp_set_callback(release_callback release_func,
-		new_connection_callback connect_func,
-		request_disconnect_callback disconnect_func,
-		void *user_data);
 
 #ifdef __cplusplus
 }

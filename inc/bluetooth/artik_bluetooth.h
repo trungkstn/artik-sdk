@@ -74,11 +74,23 @@ extern "C" {
 		BT_EVENT_SCAN = 0, /*<! This event is raised when a Bluetooth device is discovered*/
 		BT_EVENT_BOND, /*<! This event is raised when a Bluetooth device is paired/unpaired*/
 		BT_EVENT_CONNECT, /*<! This event is raised when a Bluetooth device is connected/disconnected*/
+		BT_EVENT_SPP_CONNECT, /*<! This event is raised when a SPP profile is connected*/
+		BT_EVENT_SPP_RELEASE, /*<! This event is raised when a SPP profile is released*/
+		BT_EVENT_SPP_DISCONNECT, /*<! This event is raised when a SPP profile is disconnected*/
+		BT_EVENT_AGENT_REQUEST_PINCODE, /*<! This event is raised when request pincode*/
+		BT_EVENT_AGENT_DISPLAY_PINCODE, /*<! This event is raised when display pincode*/
+		BT_EVENT_AGENT_REQUEST_PASSKEY, /*<! This event is raised when request passkey*/
+		BT_EVENT_AGENT_DISPLAY_PASSKEY, /*<! This event is raised when display passkey*/
+		BT_EVENT_AGENT_CONFIRM, /*<! This event is raised when need to confirm the passkey*/
+		BT_EVENT_AGENT_AUTHOREZE, /*<! This event is raised when need to authorize the connection*/
+		BT_EVENT_AGENT_AUTHOREZE_SERVICE, /*<! This event is raised when need to authorize the seivece*/
+		BT_EVENT_AGENT_RELEASE, /*<! This event is raised when agent is released*/
+		BT_EVENT_AGENT_CANCEL, /*<! This event is raised when agent is canceled*/
 		BT_EVENT_PROXIMITY,
 		BT_EVENT_PF_HEARTRATE, /*<! This event is raised when heart rate data is received. */
 		BT_EVENT_FTP, /*<! This event is raised to monitor a FTP transfer. */
-		BT_EVENT_GATT_PROPERTY, /*<! This event is raised when a gatt property changed. */
-		BT_EVENT_PF_CUSTOM, /*<! This event is raised when custom gatt data is received. */
+		BT_EVENT_SERVICE_RESOLVED, /*<! This event is raised when bluetooth services are resolved. */
+		BT_EVENT_GATT_CHARACTERISTIC, /*<! This event is raised when custom gatt data is received. */
 		BT_EVENT_END
 	} artik_bt_event;
 
@@ -96,11 +108,37 @@ extern "C" {
 	 *                 BT_EVENT_PF_HEARTRATE  | \ref artik_bt_hrp_data
 	 *                 BT_EVENT_FTP           | \ref artik_bt_ftp_property
 	 *                 BT_EVENT_GATT_PROPERTY | not used
-	 *                 BT_EVENT_PF_CUSTOM     | \ref artik_bt_gatt_data
+	 *                 BT_EVENT_GATT_CHARACTERISTIC     | \ref artik_bt_gatt_data
 	 * \param[in] user_data The user data passed from the \ref set_callback.
 	 */
 	typedef void (*artik_bt_callback) (artik_bt_event event, void *data,
 			void *user_data);
+
+	/*!
+	 * \brief the struct to set callbacks of the Bluetooth module.
+	 */
+	typedef struct {
+		/*<! The event to set callback*/
+		artik_bt_event event;
+		/*<! The callback function of the event*/
+		artik_bt_callback fn;
+		/*<! The user data for the event*/
+		void *user_data;
+	} artik_bt_callback_property;
+
+	/*!
+	 * \brief the struct of callback user data in BT_EVENT_SPP_CONNECT event.
+	 */
+	typedef struct {
+		/*<! The address of remote device is connected*/
+		char *device_addr;
+		/*<! The socket handle of the connection*/
+		int fd;
+		/*<! The version of the connection*/
+		int version;
+		/*<! The features of the connection*/
+		int features;
+	} artik_bt_spp_connect_property;
 
 	/*!
 	 * \brief Enumerations of major device class.
@@ -590,6 +628,18 @@ extern "C" {
 	} artik_bt_advertisement;
 
 	/*!
+	 *  \brief This enum type is used to specify the type of device
+	 */
+	typedef enum {
+		/*!< Indicate devices paired with local device */
+		BT_DEVICE_PARIED,
+		/*!< Indicate devices connected with local device */
+		BT_DEVICE_CONNECTED,
+		/*!< Indicate all devices */
+		BT_DEVICE_ALL
+	} artik_bt_device_type;
+
+	/*!
 	 *  \brief This enum type is used to specify the type of scan
 	 */
 	typedef enum {
@@ -613,20 +663,6 @@ extern "C" {
 		int16_t rssi; /*!< RSSI threshold value */
 		artik_bt_scan_type type; /*!< Type of scan */
 	} artik_bt_scan_filter;
-
-	/*!
-	 *  \brief Bluetooth AD2P source definition
-	 *
-	 *  Structure containing the elements
-	 *  defining Bluetooth A2P source properties
-	 */
-	typedef struct {
-		char *device;
-		char *uuid;
-		unsigned char codec;
-		unsigned char *configuration;
-		char *state;
-	} artik_bt_a2dp_source_property;
 
 	/*!
 	 * \brief This enum type is used to specify the repeat mode
@@ -724,6 +760,11 @@ extern "C" {
 	 */
 	typedef struct artik_bt_avrcp_item {
 		/*!
+		 * \brief The index of this item.
+		 */
+		int index;
+
+		/*!
 		 * \brief Pointer to string internally used by the API.
 		 */
 		char *item_obj_path;
@@ -738,40 +779,6 @@ extern "C" {
 		 */
 		struct artik_bt_avrcp_item *next_item;
 	} artik_bt_avrcp_item;
-
-	/*!
-	 * \brief Callback prototype for release event
-	 *
-	 * This callback is called when \ref spp_unregister_profile
-	 * is called.
-	 *
-	 * \param [in] user_data The user data passed from the \ref artik_bluetooth_spp_set_callback function
-	 */
-	typedef void (*release_callback)(void *user_data);
-	/*!
-	 * \brief Callback prototype for new connection event
-	 *
-	 * This callback is called when a new connection has been made and
-	 * authorized
-	 *
-	 * \param [in] addr The bluetooth address of the remote device
-	 * \param [in] fd file descriptor
-	 * \param [in] version profile version
-	 * \param [in] features profile features
-	 * \param [in] user_data The user data passed from the \ref artik_bluetooth_spp_set_callback function
-	 */
-	typedef void (*new_connection_callback)(char *addr, int fd,
-			int version, int features, void *user_data);
-	/*!
-	 * \brief Callback prototype for disconnection event
-	 *
-	 * This callback is called when a disconnection occurs.
-	 *
-	 * \param [in] addr The bluetooth address of the remote device
-	 * \param [in] user_data The user data passed from the \ref artik_bluetooth_spp_set_callback function
-	 */
-	typedef void (*request_disconnect_callback)(char *addr,
-			void *user_data);
 
 	/*!
 	 * \brief Description of SPP profile option
@@ -796,12 +803,6 @@ extern "C" {
 		long version;/*!< Profile version */
 		long features;/*!< Profile features */
 	} artik_bt_spp_profile_option;
-
-	typedef unsigned char * (*select_config_callback)(
-		unsigned char *capabilities, int *len);
-	typedef void (*set_config_callback)(
-			artik_bt_a2dp_source_property * properties);
-	typedef void (*clear_config_callback)(void);
 
 	/*!
 	 *  \brief Bluetooth FTP definition
@@ -877,131 +878,61 @@ extern "C" {
 	} artik_bt_agent_request_error;
 
 	/*!
-	 * \brief Method called when the bluetooth service unregisters the agent.
-	 *
-	 * There is no need to call the method \ref agent_unregister in this callback,
-	 * because when this method gets called the agent has already been unregistered
-	 *
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*agent_release_callback)(void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service needs to get the pincode for an authentification.
-	 *
-	 * The pincode or an error should be returned to the bluetooth service with \ref agent_send_pincode
-	 * or \ref agent_send_error functions
-	 *
-	 * \param[in] handle Handle tied to a bluetooth service request
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*request_pincode_callback)(artik_bt_agent_request_handle handle, char *device, void *user_data);
-
-	/*
-	 * \brief Method called when the bluetooth service needs to display a pincode for an authentication
-	 *
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] pincode An alphanumeric string of 1-16 characters
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*display_pincode_callback)(char *device,
-			char *pincode,
-			void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service needs to get the passkey for an authentication.
-	 * The passkey or an error should be returned to the bluetooth service with \ref agent_send_ or
-	 * \ref agent_send_error functions.
-	 *
-	 * \param[in] handle Handle tied to a bluetooth service request
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*request_passkey_callback)(artik_bt_agent_request_handle handle, char *device, void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service needs to display a passkey for an authentifcation
-	 *
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] passkey A numeric value between 0-999999
-	 * \param[in] entered A numeric value indicates the number of already typed keys on the remote side
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*display_passkey_callback)(char *device,
-			unsigned int passkey,
-			unsigned int entered,
-			void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service needs to confirm a passkey for an authentication
-	 *
-	 * To confirm the request, you should use \ref agent_send_empty_response function.
-	 * If you want to reject or cancel the request, you should use \ref agent_send_error
-	 *
-	 * \param[in] handle Handle tied to a bluetooth service request
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] passkey A numeric value between 0-999999
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*request_confirmation_callback)(artik_bt_agent_request_handle handle,
-			char *device,
-			unsigned int passkey,
-			void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service request the user to authorize an incoming pairing attempt.
-	 *
-	 * To confirm the request, you should use \ref agent_send_empty_response.
-	 * If you want to reject or cancel the request, you should use \ref agent_send_error
-	 *
-	 * \param[in] handle Handle tied to a bluetooth service request
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*request_authorization_callback)(artik_bt_agent_request_handle handle,
-			char *device,
-			void *user_data);
-
-	/*!
-	 * \brief Method called when the bluetooth service needs to authorize a connection to a service specified
-	 * by its \ref uuid
-	 *
-	 * To confirm the request, you should use \ref agent_send_empty_response function.
-	 * If you want to reject or cancel the request, you should use \ref agent_send_error
-	 *
-	 * \param[in] handle Handle tied to a bluetooth service request
-	 * \param[in] device The bluetooth address of the remote device
-	 * \param[in] uuid The uuid of the service
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*authorize_service_callback)(artik_bt_agent_request_handle handle,
-			char *device,
-			char *uuid,
-			void *user_data);
-
-	/*!
-	 * \brief Method called to indicate that the bluetooth service request failed before the agent returned a reply.
-	 *
-	 * \param[in] user_data The user data passed from the \ref agent_set_callback function
-	 */
-	typedef void (*cancel_callback)(void *user_data);
-
-	/*!
-	 * \brief This struct represents a Bluetooth agent.
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_REQUEST_PINCODE,
+		BT_EVENT_AGENT_REQUEST_PASSKEY and BT_EVENT_AGENT_AUTHOREZE event.
 	 */
 	typedef struct {
-		agent_release_callback release_func;
-		request_pincode_callback request_pincode_func;
-		display_pincode_callback display_pincode_func;
-		request_passkey_callback request_passkey_func;
-		display_passkey_callback display_passkey_func;
-		request_confirmation_callback request_confirmation_func;
-		request_authorization_callback request_authorization_func;
-		authorize_service_callback authorize_service_func;
-		cancel_callback cancel_func;
-		void *user_data; /*<! The user data to be passed to the callbakc functions */
-	} artik_bt_agent_callbacks;
+		/*<! The handle to be passed to the callbakc functions */
+		artik_bt_agent_request_handle handle;
+		/*<! The address of the request device */
+		char *device;
+	} artik_bt_agent_request_property;
+
+	/*!
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_DISPLAY_PINCODE event.
+	 */
+	typedef struct {
+		/*<! The address of the request device */
+		char *device;
+		/*<! The pincode to be display */
+		char *pincode;
+	} artik_bt_agent_pincode_property;
+
+	/*!
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_DISPLAY_PASSKEY event.
+	 */
+	typedef struct {
+		/*<! The address of the request device */
+		char *device;
+		/*<! The passkey to be display */
+		unsigned int passkey;
+		/*<! The entered of the request device */
+		unsigned int entered;
+	} artik_bt_agent_passkey_property;
+
+	/*!
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_CONFIRM event.
+	 */
+	typedef struct {
+		/*<! The handle to be passed to the callbakc functions */
+		artik_bt_agent_request_handle handle;
+		/*<! The address of the request device */
+		char *device;
+		/*<! The passkey need to be confirmed */
+		unsigned int passkey;
+	} artik_bt_agent_confirmation_property;
+
+	/*!
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_AUTHOREZE_SERVICE event.
+	 */
+	typedef struct {
+		/*<! The handle to be passed to the callbakc functions */
+		artik_bt_agent_request_handle handle;
+		/*<! The address of device to be authorized*/
+		char *device;
+		/*<! The device uuid need to be authorized*/
+		char *uuid;
+	} artik_bt_agent_authorize_property;
 
 	/*! \struct artik_bluetooth_module
 	 *
@@ -1024,35 +955,28 @@ extern "C" {
 		 */
 		artik_error(*stop_scan) ();
 		/*!
+		 * \brief Get device properties.
+		 *
+		 * \param[in] addr The address of the remote Bluetooth device
+		 * \param[out] device This will be filled with device properties and
+		 *                    caller must free this.
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*get_device) (const char *addr, artik_bt_device * device);
+		/*!
 		 * \brief Get devices list.
 		 *
+		 * \param[in] devices_type The type of the devices list.
 		 * \param[out] devices t Device list
 		 * \param[out] num_devices Number of devices
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*get_devices) (artik_bt_device**devices, int *num_devices);
-		/*!
-		 * \brief Get paired devices list.
-		 *
-		 * \param[out] devices Bluetooth device list
-		 * \param[out] num_devices Number of devices
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 *
-		 */
-		artik_error(*get_paired_devices) (artik_bt_device**devices, int *num_devices);
-		/*!
-		 * \brief Get connected devices list.
-		 *
-		 * \param[out] devices Bluetooth device list
-		 * \param[out] num_devices Number of devices
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 *
-		 */
-		artik_error(*get_connected_devices) (artik_bt_device**devices, int *num_devices);
+		artik_error(*get_devices) (artik_bt_device_type device_type,
+				artik_bt_device**devices, int *num_devices);
 		/*!
 		 * \brief Create a bond with a remote Bluetooth device, asynchronously.
 		 *
@@ -1091,15 +1015,23 @@ extern "C" {
 		 */
 		artik_error(*disconnect) (const char *addr);
 		/*!
+		 * \brief Free the memory used by the remote device
+		 *
+		 * \param[in] device The remote device
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 */
+		artik_error(*free_device) (artik_bt_device * device);
+		/*!
 		 * \brief Free devices list
 		 *
 		 * \param[in] device_list \ref artik_bt_device array to free
-		 * \param[in] count Number of \ref artik_bt_device objects contained in the array
+		 * \param[in] count Number of \ref artik_bt_device objects contained in the array.
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*free_devices) (artik_bt_device*device_list, int count);
+		artik_error(*free_devices) (artik_bt_device**device_list, int count);
 		/*!
 		 * \brief Register a callback function to be invoked when the device
 		 *        discovery state changes.
@@ -1113,6 +1045,18 @@ extern "C" {
 		 */
 		artik_error(*set_callback) (artik_bt_event event,
 				artik_bt_callback user_callback, void *user_data);
+		/*!
+		 * \brief Register callbacks function to be invoked when the device
+		 *        discovery state changes.
+		 *
+		 * \param[in] user_callbacks The callback list to register
+		 * \param[in] size The number of callbacks in the list
+		 *
+		 * \return S_OK on success, otherwise a negative error value.
+		 *
+		 */
+		artik_error(*set_callbacks) (artik_bt_callback_property
+				*user_callbacks, unsigned int size);
 		/*!
 		 * \brief Unregister the callback function.
 		 *
@@ -1216,25 +1160,6 @@ extern "C" {
 		 */
 		bool (*is_scanning)(void);
 		/*!
-		 * \brief Get a property of a remote device.
-		 *
-		 * The possible values for \ref property are "Address", "Name", "Icon", "Alias", "Adapter", "Modalias".
-		 *
-		 * property | Description
-		 * ------------------------------------------------------------
-		 * Address  | The bluetooth device address.
-		 * Name     | The bluetooth device name.
-		 * Alias    | The name alias for the remote device.
-		 *
-		 * \param[in] addr The bluetooth address of the remote device.
-		 * \param[in] property The property you want to get
-		 * \param[out] value The value of the property.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 */
-		artik_error(*get_device_property) (const char *addr,
-				const char *property, char **value);
-		/*!
 		 * \brief Get the adapter information
 		 *
 		 * \param[out] adapter The bluetooth adapter information
@@ -1289,14 +1214,6 @@ extern "C" {
 		 * \return S_OK on success, otherwise a negative error value.
 		 */
 		artik_error(*unset_block) (const char *addr);
-		/*!
-		 * \brief Free the memory used by the remote device
-		 *
-		 * \param[in] device The remote device
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 */
-		artik_error(*free_device) (artik_bt_device * device);
 		/*!
 		 * \brief Indicate if the remote device is paired.
 		 *
@@ -1592,12 +1509,12 @@ extern "C" {
 		/*!
 		 * \brief Change to the specified folder
 		 *
-		 * \param[in] folder The path of folder it will change to
+		 * \param[in] index The index of folder it will change to
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*avrcp_controller_change_folder) (const char *folder);
+		artik_error(*avrcp_controller_change_folder) (int index);
 		/*!
 		 * \brief List the items of the folder
 		 *
@@ -1633,13 +1550,10 @@ extern "C" {
 		/*!
 		 * \brief Whether an AVRCP target is connected with current device.
 		 *
-		 * \param[out] is_connected The state of whether an AVRCP target is
-		 *                         connected.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
+		 * \return True if an AVRCP target is connected, false otherwise.
 		 *
 		 */
-		artik_error(*avrcp_controller_is_connected) (bool *is_connected);
+		bool (*avrcp_controller_is_connected)(void);
 		/*!
 		 * \brief Control remote AVRCP target to resume play.
 		 *
@@ -1692,31 +1606,32 @@ extern "C" {
 		/*!
 		 * \brief Get the item property
 		 *
-		 * \param[in] item To be get property
-		 * \param[in] properties Item's property be sorted
+		 * \param[in] index To be get property
+		 * \param[in] properties index's property be sorted
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*avrcp_controller_get_property)(char *item, artik_bt_avrcp_item_property **properties);
+		artik_error(*avrcp_controller_get_property)(int index,
+				artik_bt_avrcp_item_property **properties);
 		/*!
 		 * \brief Play the item
 		 *
-		 * \param[in] item To be played item
+		 * \param[in] index To be played index
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*avrcp_controller_play_item)(char *item);
+		artik_error(*avrcp_controller_play_item)(int index);
 		/*!
 		 * \brief Add the item to the playing list
 		 *
-		 * \param[in] item To be add to the playing list
+		 * \param[in] index To be add to the playing list
 		 *
 		 * \return S_OK on success, otherwise a negative error value.
 		 *
 		 */
-		artik_error(*avrcp_controller_add_to_playing)(char *item);
+		artik_error(*avrcp_controller_add_to_playing)(int index);
 		/*!
 		 * \brief Get a player name from an AVRCP target .
 		 *
@@ -1756,12 +1671,10 @@ extern "C" {
 		/*!
 		 * \brief Whether the player is browsable.
 		 *
-		 * \param[out] browsable The player browsable got from an AVRCP target.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
+		 * \return True if the player is browsable, false otherwise.
 		 *
 		 */
-		artik_error(*avrcp_controller_get_browsable) (bool *is_browsable);
+		bool (*avrcp_controller_is_browsable)(void);
 		/*!
 		 * \brief Get a playback position from an AVRCP target .
 		 *
@@ -1813,12 +1726,10 @@ extern "C" {
 		/*!
 		 * \brief get the status of the connection.
 		 *
-		 * \param[out] connected The connection status.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
+		 * \return True when a pan is connected, false otherwise.
 		 *
 		 */
-		artik_error(*pan_get_connected) (bool *connected);
+		bool (*pan_is_connected)(void);
 		/*!
 		 * \brief get the connection interface of the connection.
 		 *
@@ -1853,19 +1764,6 @@ extern "C" {
 		 *
 		 */
 		artik_error(*spp_unregister_profile)();
-		/*!
-		 * \brief set the callback of the spp.
-		 *
-		 * \param[in] release_callback The handler of release.
-		 * \param[in] new_connection_callback The handler of new connection.
-		 * \param[in] request_disconnect_callback The handler of request disconnect.
-		 * \param[in] user_data The user data to be passed to the callback functions.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 *
-		 */
-		artik_error(*spp_set_callback)(release_callback release_func, new_connection_callback connect_func,
-				request_disconnect_callback disconnect_func, void *user_data);
 		/*!
 		 * \brief create ftp session with FTP server.
 		 *
@@ -1974,16 +1872,6 @@ extern "C" {
 		 *
 		 */
 		artik_error(*agent_unregister)(void);
-		/*!
-		 * \brief Set agent callback functions.
-		 *		 If it is not invoked, default callback function will be set.
-		 *
-		 * \param[in] agent_callback The callback functions needed by blueZ.
-		 *
-		 * \return S_OK on success, otherwise a negative error value.
-		 *
-		 */
-		artik_error(*agent_set_callback)(artik_bt_agent_callbacks * agent_callback);
 		/*!
 		 * \brief Send the pincode to the bluetooth service
 		 *

@@ -28,8 +28,30 @@ artik_error bt_set_callback(artik_bt_event event,
 	if (event >= BT_EVENT_END)
 		return E_BAD_ARGS;
 	hci.callback[event].fn = user_callback;
-	hci.callback[event].data = user_data;
+	hci.callback[event].user_data = user_data;
 
+	return S_OK;
+}
+
+artik_error bt_set_callbacks(artik_bt_callback_property *user_callbacks,
+	unsigned int size)
+{
+	artik_bt_event bt_event;
+	unsigned int callback_num;
+
+	if ((!user_callbacks) || (size <= 0))
+		return E_BAD_ARGS;
+
+	for (callback_num = 0; callback_num < size;
+		user_callbacks++, callback_num++) {
+		bt_event = user_callbacks->event;
+
+		if ((bt_event < 0) || (bt_event >= BT_EVENT_END))
+			continue;
+
+		hci.callback[bt_event].fn = user_callbacks->fn;
+		hci.callback[bt_event].user_data = user_callbacks->user_data;
+	}
 	return S_OK;
 }
 
@@ -41,7 +63,7 @@ artik_error bt_unset_callback(artik_bt_event event)
 		return E_BAD_ARGS;
 
 	hci.callback[event].fn = NULL;
-	hci.callback[event].data = NULL;
+	hci.callback[event].user_data = NULL;
 
 	return S_OK;
 }
