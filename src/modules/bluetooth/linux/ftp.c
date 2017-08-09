@@ -119,28 +119,15 @@ static artik_error _check_status(void)
 	return S_OK;
 }
 
-static void _ftp_session_callback(GObject *source_object,
-		GAsyncResult *res, gpointer user_data)
-{
-	GDBusConnection *bus = G_DBUS_CONNECTION(source_object);
-	gboolean connected = FALSE;
-	GError *error = NULL;
-
-	g_dbus_connection_call_finish(bus, res, &error);
-	if (error == NULL) {
-		connected = TRUE;
-		hci.state = BT_DEVICE_STATE_CONNECTED;
-	} else {
-		hci.state = BT_DEVICE_STATE_IDLE;
-		log_err("Connect remote device failed :%s\n", error->message);
-		g_clear_error(&error);
-	}
-	_user_callback(BT_EVENT_CONNECT, &connected);
-}
-
 artik_error bt_ftp_create_session(char *dest_addr)
 {
 	GVariantBuilder *args = NULL;
+	GError *error = NULL;
+	gchar *path = NULL;
+	GVariant *result = NULL;
+
+	if (!dest_addr)
+		return E_BAD_ARGS;
 
 	if (S_OK != (_call_exe(OBEXD_START_CMD))) {
 		log_dbg("Start obexd faild!\n");
@@ -152,19 +139,26 @@ artik_error bt_ftp_create_session(char *dest_addr)
 	args = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 	g_variant_builder_add(args, "{sv}", "Target", g_variant_new_string("ftp"));
 
-	hci.state = BT_DEVICE_STATE_CONNECTING;
-	g_dbus_connection_call(hci.session_conn,
+	result = g_dbus_connection_call_sync(hci.session_conn,
 		DBUS_BLUEZ_OBEX_BUS,
 		DBUS_BLUEZ_OBEX_PATH,
 		DBUS_IF_OBEX_CLIENT,
 		"CreateSession",
 		g_variant_new("(sa{sv})", dest_addr, args),	NULL,
-		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL,
-		_ftp_session_callback, NULL);
+		G_DBUS_CALL_FLAGS_NONE, G_MAXINT, NULL, &error);
 
 	g_variant_builder_unref(args);
 
-	return S_OK;
+	if (error == NULL) {
+		g_variant_get(result, "(o)", &path);
+		strncpy(session_path, path, strlen(path));
+		session_path[strlen(path)] = '\0';
+		return S_OK;
+	}
+
+	log_err("Create FTP session failed :%s\n", error->message);
+	g_clear_error(&error);
+	return E_BT_ERROR;
 }
 
 artik_error bt_ftp_remove_session(void)
@@ -195,7 +189,7 @@ artik_error bt_ftp_remove_session(void)
 
 		return E_BT_ERROR;
 	}
-
+	memset(session_path, 0, SESSION_PATH_LEN);
 	return S_OK;
 }
 
@@ -381,6 +375,9 @@ artik_error bt_ftp_list_folder(artik_bt_ftp_file **file_list)
 	GVariant *result = NULL;
 	GError *error = NULL;
 	artik_error ret = S_OK;
+
+	if (!file_list)
+		return E_BAD_ARGS;
 
 	ret = _check_status();
 	if (ret != S_OK)
