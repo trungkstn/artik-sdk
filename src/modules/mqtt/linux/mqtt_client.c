@@ -347,7 +347,7 @@ artik_mqtt_handle mqtt_create_client(artik_mqtt_config *config)
 				"tlsv1.2", NULL);
 		tls_write_temp_cert_files((struct mosquitto *)mqtt_client->mosq,
 				config->tls);
-	} else if (config->psk) {
+	} else if (config->psk && config->psk->psk && config->psk->identity) {
 		mosquitto_tls_opts_set((struct mosquitto *)mqtt_client->mosq, 0,
 				"tlsv1.2", NULL);
 		rc = mosquitto_tls_psk_set((struct mosquitto *)
