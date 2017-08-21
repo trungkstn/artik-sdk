@@ -26,8 +26,6 @@
 #define SERVICE_UUID_32_BIT "0000180d"
 #define SERVICE_UUID_128_BIT "00001802-0000-1000-8000-00805f9b34fb"
 
-#define SERVICE_DATA_UUID_16_BIT "1234"
-
 static artik_loop_module *loop;
 
 static void set_advertisement(artik_bt_advertisement *adv)
@@ -40,23 +38,46 @@ static void set_advertisement(artik_bt_advertisement *adv)
 	adv->svc_uuid[1] = SERVICE_UUID_32_BIT;
 	adv->svc_uuid[2] = SERVICE_UUID_128_BIT;
 
+	adv->svc_id = SERVICE_UUID_16_BIT;
+	adv->svc_data_len = 4;
+	adv->svc_data = (unsigned char *)malloc(adv->svc_data_len);
+	adv->svc_data[0] = 0x01;
+	adv->svc_data[1] = 0x02;
+	adv->svc_data[2] = 0x03;
+	adv->svc_data[3] = 0x04;
+
+	printf("[Advertising Data]\n");
+
+	printf("Service UUIDs:\n");
+	for (int i = 0; i < adv->svc_uuid_len; i++) {
+		printf(" %s\n", adv->svc_uuid[i]);
+
+		if (strcmp(adv->svc_uuid[i], adv->svc_id) == 0) {
+			printf("(Service Data:");
+
+			for (int j = 0; j < adv->svc_data_len; j++)
+				printf(" 0x%02x", adv->svc_data[j]);
+			printf(")\n");
+		}
+	}
+
+
 	adv->mfr_id = 0x0075; // Samsung Electronics Co. Ltd.
 	adv->mfr_data_len = 4;
-	adv->mfr_data = (unsigned char *)malloc(4);
-	adv->mfr_data[0] = 0x01;
-	adv->mfr_data[1] = 0x02;
-	adv->mfr_data[2] = 0x03;
-	adv->mfr_data[3] = 0x04;
+	adv->mfr_data = (unsigned char *)malloc(adv->mfr_data_len);
+	adv->mfr_data[0] = 0x05;
+	adv->mfr_data[1] = 0x06;
+	adv->mfr_data[2] = 0x07;
+	adv->mfr_data[3] = 0x08;
 
-	adv->svc_id = SERVICE_DATA_UUID_16_BIT;
-	adv->svc_data_len = 4;
-	adv->svc_data = (unsigned char *)malloc(4);
-	adv->svc_data[0] = 0x05;
-	adv->svc_data[1] = 0x06;
-	adv->svc_data[2] = 0x07;
-	adv->svc_data[3] = 0x08;
+	printf("Company Identifier Code: 0x%04x\n", adv->mfr_id);
+	printf("Manufacturer Specific Data: ");
+	for (int i = 0; i < adv->mfr_data_len; i++)
+		printf(" 0x%02x", adv->mfr_data[i]);
+	printf("\n");
 
 	adv->tx_power = true;
+	printf("TX Power Level included\n");
 }
 
 static int on_signal(void *user_data)
@@ -69,18 +90,14 @@ static int on_signal(void *user_data)
 int main(void)
 {
 	artik_bluetooth_module *bt;
-	artik_bt_advertisement adv;
+	artik_bt_advertisement adv = {0};
 	int adv_id;
 
 	bt = (artik_bluetooth_module *)artik_request_api_module("bluetooth");
 	loop = (artik_loop_module *)artik_request_api_module("loop");
 
-	fprintf(stdout, "start broadcasting with random address\n");
-	fprintf(stdout, "service includes:\n %s (16bit UUID)\n %s (32bit UUID)"
-			"\n %s (128bit UUID)\n", SERVICE_UUID_16_BIT, SERVICE_UUID_32_BIT,
-			SERVICE_UUID_128_BIT);
-
 	set_advertisement(&adv);
+
 	bt->register_advertisement(&adv, &adv_id);
 
 	loop->add_signal_watch(SIGINT, on_signal, NULL, NULL);
@@ -88,7 +105,10 @@ int main(void)
 
 	bt->unregister_advertisement(adv_id);
 
+	free(adv.mfr_data);
+
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
+
 	return 0;
 }
