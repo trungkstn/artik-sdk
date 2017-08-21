@@ -32,8 +32,8 @@
 #define MAX_PACKET_SIZE 1024
 
 static char remote_mac_addr[BT_ADDRESS_LEN];
-static artik_error session_status;
 static artik_error property_status;
+static int suspended;
 
 static int init_suite1(void)
 {
@@ -117,22 +117,15 @@ static int _on_keyboard_received(int fd,
 	while (buf != NULL)
 		buf = fgets(buffer, MAX_PACKET_SIZE, stdin);
 	fprintf(stdout, "Keyboard quit\n");
-	session_status = E_BT_ERROR;
 	property_status = E_BT_ERROR;
 	loop->quit();
 	return 1;
 }
 
-static void _ftp_on_session(artik_bt_event event,
-	void *data, void *user_data)
+static void on_timeout_callback(void *user_data)
 {
-	bool connected = *(bool *)data;
-	artik_loop_module *loop = (artik_loop_module *)user_data;
+	artik_loop_module *loop = (artik_loop_module *) user_data;
 
-	if (connected)
-		session_status = S_OK;
-	else
-		session_status = E_BT_ERROR;
 	loop->quit();
 }
 
@@ -142,94 +135,92 @@ static void _property_callback(artik_bt_event event,
 	artik_bt_ftp_property *p = (artik_bt_ftp_property *)data;
 	artik_loop_module *loop = (artik_loop_module *)user_data;
 	const char *status_complete = "complete";
+	const char *status_suspend = "suspended";
 
 	if (!strncmp(p->status, (char *)status_complete,
 		strlen(status_complete))) {
+		suspended = 0;
 		property_status = S_OK;
 		loop->quit();
-	}
-}
-
-artik_error _ftp_start_session(void)
-{
-	artik_error ret;
-	int watch_id = 0;
-	artik_bluetooth_module *bt = (artik_bluetooth_module *)
-		artik_request_api_module("bluetooth");
-	artik_loop_module *loop = (artik_loop_module *)
-		artik_request_api_module("loop");
-
-	ret = bt->set_callback(BT_EVENT_CONNECT,
-		_ftp_on_session, (void *)loop);
-	if (ret != S_OK)
-		goto quit;
-	ret = bt->ftp_create_session(remote_mac_addr);
-	if (ret != S_OK)
-		goto quit;
-
-	loop->add_fd_watch(STDIN_FILENO,
-			(WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP
-			| WATCH_IO_NVAL),
-			_on_keyboard_received, (void *)loop, &watch_id);
-	loop->run();
-
-quit:
-	loop->remove_fd_watch(watch_id);
-	artik_release_api_module(bt);
-	artik_release_api_module(loop);
-	return ret;
+	} else if (!strncmp(p->status, (char *)status_suspend,
+		strlen(status_suspend))) {
+		suspended = 1;
+		loop->quit();
+	} else
+		suspended = 0;
 }
 
 static void ftp_create_session_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(NULL);
+	CU_ASSERT(ret == E_BAD_ARGS);
+
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
 
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
 
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_remove_session_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
 	ret = bt->ftp_remove_session();
-	CU_ASSERT(ret != S_OK);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
 
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
+
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
 
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_change_foler_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	char *object_name = NULL;
 	const char *test_object = "ut_test";
 	const char *object_type = "folder";
+	const char *parent_folder = "..";
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
 	ret = bt->ftp_change_folder((char *)test_object);
-	CU_ASSERT(ret != S_OK);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
+
+	ret = bt->ftp_change_folder(NULL);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
 	ret = _ftp_object_search(NULL, object_type, &object_name);
 	if (ret == S_OK) {
@@ -240,7 +231,13 @@ static void ftp_change_foler_test(void)
 		fprintf(stdout, " no foder found!\n");
 		ret = bt->ftp_create_folder((char *)test_object);
 		CU_ASSERT(ret == S_OK);
+		ret = bt->ftp_change_folder((char *)parent_folder);
+		CU_ASSERT(ret == S_OK);
 		ret = bt->ftp_change_folder((char *)test_object);
+		CU_ASSERT(ret == S_OK);
+		ret = bt->ftp_change_folder((char *)parent_folder);
+		CU_ASSERT(ret == S_OK);
+		ret = bt->ftp_delete_file((char *)test_object);
 		CU_ASSERT(ret == S_OK);
 	}
 
@@ -249,32 +246,45 @@ static void ftp_change_foler_test(void)
 
 	if (object_name)
 		free(object_name);
+
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_create_foler_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	const char *object_name = "ut_test";
 	const char *object_type = "folder";
+	const char *parent_folder = "..";
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
 	ret = bt->ftp_create_folder((char *)object_name);
-	CU_ASSERT(ret != S_OK);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
+
+	ret = bt->ftp_create_folder(NULL);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
 	ret = _ftp_object_search(object_name, object_type, NULL);
 	if (ret == S_OK) {
-		fprintf(stdout, "object found: %s\n", object_name);
+		fprintf(stdout, "folder found: %s\n", object_name);
 		ret = bt->ftp_delete_file((char *)object_name);
 		CU_ASSERT(ret == S_OK);
-	} else
-		fprintf(stdout, "object not found: %s\n", object_name);
+	}
 	ret = bt->ftp_create_folder((char *)object_name);
+	CU_ASSERT(ret == S_OK);
+
+	ret = bt->ftp_change_folder((char *)parent_folder);
 	CU_ASSERT(ret == S_OK);
 
 	ret = _ftp_object_search(object_name, object_type, NULL);
@@ -286,30 +296,42 @@ static void ftp_create_foler_test(void)
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
 
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_delete_foler_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	const char *object_name = "ut_test";
 	const char *object_type = "folder";
+	const char *parent_folder = "..";
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
 	ret = bt->ftp_delete_file((char *)object_name);
-	CU_ASSERT(ret != S_OK);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
+
+	ret = bt->ftp_delete_file(NULL);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
 	ret = _ftp_object_search(object_name, object_type, NULL);
 	if (ret != S_OK) {
 		fprintf(stdout, "object not found: %s\n", object_name);
 		ret = bt->ftp_delete_file((char *)object_name);
-		CU_ASSERT(ret != S_OK);
+		CU_ASSERT(ret == E_BT_ERROR);
 		ret = bt->ftp_create_folder((char *)object_name);
+		CU_ASSERT(ret == S_OK);
+		ret = bt->ftp_change_folder((char *)parent_folder);
 		CU_ASSERT(ret == S_OK);
 	}
 	ret = bt->ftp_delete_file((char *)object_name);
@@ -318,22 +340,31 @@ static void ftp_delete_foler_test(void)
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
 
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_list_foler_test(void)
 {
 	artik_error ret;
+	int timeout_id = 0;
 	artik_bt_ftp_file *file_list = NULL;
 	artik_bluetooth_module *bt = (artik_bluetooth_module *)
 		artik_request_api_module("bluetooth");
+	artik_loop_module *loop = (artik_loop_module *)
+		artik_request_api_module("loop");
 
 	ret = bt->ftp_list_folder(&file_list);
-	CU_ASSERT(ret != S_OK);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
+
+	ret = bt->ftp_list_folder(NULL);
+	CU_ASSERT(ret == E_BAD_ARGS);
 
 	ret = bt->ftp_list_folder(&file_list);
 	CU_ASSERT(ret == S_OK);
@@ -341,13 +372,18 @@ static void ftp_list_foler_test(void)
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
 
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
 	artik_release_api_module(bt);
+	artik_release_api_module(loop);
 }
 
 static void ftp_get_file_test(void)
 {
 	artik_error ret = S_OK;
 	int watch_id = 0;
+	int timeout_id = 0;
 	char *object_name = NULL;
 	const char *object_type = "file";
 	const char *target_object = "/root/target_file.c";
@@ -357,13 +393,19 @@ static void ftp_get_file_test(void)
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_get_file((char *)target_object, object_name);
+	CU_ASSERT(ret == E_BAD_ARGS);
+
+	ret = bt->ftp_get_file((char *)target_object, (char *)test_object);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
 
 	ret = _ftp_object_search(NULL, object_type, &object_name);
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(object_name != NULL);
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
 
 	ret = bt->set_callback(BT_EVENT_FTP,
 		_property_callback, (void *)loop);
@@ -371,27 +413,26 @@ static void ftp_get_file_test(void)
 
 	ret = bt->ftp_get_file((char *)target_object, object_name);
 	CU_ASSERT(ret == S_OK);
+	ret = bt->ftp_get_file((char *)target_object, object_name);
+	CU_ASSERT(ret == E_BUSY);
 
 	loop->add_fd_watch(STDIN_FILENO,
 			(WATCH_IO_IN | WATCH_IO_ERR | WATCH_IO_HUP
 			| WATCH_IO_NVAL),
 			_on_keyboard_received, (void *)loop, &watch_id);
+
 	loop->run();
 	CU_ASSERT(property_status == S_OK);
-
-	ret = _ftp_object_search(test_object, object_type, NULL);
-	if (ret == S_OK)
-		ret = bt->ftp_delete_file((char *)test_object);
-
-	ret = bt->ftp_get_file((char *)target_object, (char *)test_object);
-	CU_ASSERT(ret != S_OK);
-
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
 
 	if (object_name)
 		free(object_name);
 	loop->remove_fd_watch(watch_id);
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
+
+	ret = bt->unset_callback(BT_EVENT_FTP);
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
@@ -400,6 +441,7 @@ static void ftp_put_file_test(void)
 {
 	artik_error ret = S_OK;
 	int watch_id = 0;
+	int timeout_id = 0;
 	char *object_name = NULL;
 	const char *object_type = "file";
 	const char *target_object = "/root/target_file";
@@ -409,13 +451,20 @@ static void ftp_put_file_test(void)
 	artik_loop_module *loop = (artik_loop_module *)
 		artik_request_api_module("loop");
 
-	ret = _ftp_start_session();
+	ret = bt->ftp_put_file((char *)test_object, (char *)target_object);
+	CU_ASSERT(ret == E_NOT_INITIALIZED);
+
+	ret = bt->ftp_put_file((char *)test_object, object_name);
+	CU_ASSERT(ret == E_BAD_ARGS);
+
+	ret = bt->ftp_create_session(remote_mac_addr);
 	CU_ASSERT(ret == S_OK);
-	CU_ASSERT(session_status == S_OK);
 
 	ret = _ftp_object_search(NULL, object_type, &object_name);
 	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(object_name != NULL);
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
 
 	ret = bt->set_callback(BT_EVENT_FTP,
 		_property_callback, (void *)loop);
@@ -431,22 +480,18 @@ static void ftp_put_file_test(void)
 	loop->run();
 	CU_ASSERT(property_status == S_OK);
 
-	ret = bt->ftp_put_file((char *)test_object, object_name);
-	CU_ASSERT(ret != S_OK);
-	loop->run();
-	CU_ASSERT(property_status == S_OK);
-
 	ret = bt->ftp_put_file((char *)target_object, object_name);
-	CU_ASSERT(ret == S_OK);
 	loop->run();
+	CU_ASSERT(ret == S_OK);
 	CU_ASSERT(property_status == S_OK);
-
 	ret = bt->ftp_remove_session();
 	CU_ASSERT(ret == S_OK);
-
+	loop->add_timeout_callback(&timeout_id, 3000, on_timeout_callback, (void *)loop);
+	loop->run();
 	if (object_name)
 		free(object_name);
 	loop->remove_fd_watch(watch_id);
+	ret = bt->unset_callback(BT_EVENT_FTP);
 	artik_release_api_module(bt);
 	artik_release_api_module(loop);
 }
@@ -502,8 +547,8 @@ artik_error remote_info_get(void)
 		return E_BAD_ARGS;
 	if (strlen(remote_mac_addr) != (BT_ADDRESS_LEN - 1))
 		return E_BAD_ARGS;
-	fprintf(stdout, "remote address: %s-%zu\n",
-		remote_mac_addr, strlen(remote_mac_addr));
+	fprintf(stdout, "remote address: %s-%d\n",
+		remote_mac_addr, (int)strlen(remote_mac_addr));
 
 	return S_OK;
 }

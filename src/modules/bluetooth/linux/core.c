@@ -290,7 +290,8 @@ static void _proximity_properties_changed(GVariant *variant)
 	g_variant_unref(val_variant);
 }
 
-static void _obex_properties_changed(const char *object_path, GVariant *properties)
+static void _obex_properties_changed(const char *object_path,
+		GVariant *properties)
 {
 	if (transfer_property.object_path == NULL)
 		return;
@@ -302,7 +303,8 @@ static void _obex_properties_changed(const char *object_path, GVariant *properti
 
 	_user_callback(BT_EVENT_FTP, &transfer_property);
 
-	if (!g_strcmp0(transfer_property.status, "complete") || !g_strcmp0(transfer_property.status, "error")) {
+	if (!g_strcmp0(transfer_property.status, "complete")
+		|| !g_strcmp0(transfer_property.status, "error")) {
 		g_free(transfer_property.object_path);
 		transfer_property.object_path = NULL;
 	}
@@ -814,10 +816,6 @@ void _on_interface_added(const gchar *sender_name,
 			/* TODO: DBUS_IF_GATTSERVICE1 handling */
 			_process_gatt_service(path);
 			log_dbg("[NEW] ftp added %s\n", path);
-		} else if (g_strcmp0(interface, DBUS_IF_OBEX_SESSION) == 0) {
-			log_dbg("[NEW] session added %s\n", path);
-			strncpy(session_path, path, strlen(path));
-			session_path[strlen(path)] = '\0';
 		} else if (g_strcmp0(interface, DBUS_IF_OBEX_TRANSFER) == 0) {
 			if (transfer_property.object_path != NULL)
 				free(transfer_property.object_path);
