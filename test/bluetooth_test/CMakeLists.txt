@@ -42,6 +42,7 @@ SET( TESTS
 	unit_avrcp
 	unit_nap
 	unit_panu
+	ibeacon
 )
 
 FOREACH ( test ${TESTS})
