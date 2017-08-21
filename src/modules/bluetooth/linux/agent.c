@@ -91,10 +91,8 @@ static void display_pincode(char *device, char *pincode, void *user_data)
 
 static void request_passkey(artik_bt_agent_request_handle handle, char *device, void *user_data)
 {
-	log_info("Request passkey (%s)\n", device);
-	srand((int)time(0));
-
-	bt_agent_send_passkey(handle, (unsigned int)rand()%1000000);
+	log_info("Request passkey (%s) - Not implemented\n", device);
+	bt_agent_send_error(handle, BT_AGENT_REQUEST_REJECTED, "Not implemented");
 }
 
 static void display_passkey(char *device, unsigned int passkey,
