@@ -218,6 +218,10 @@ static artik_error tls_write_temp_cert_files(struct mosquitto *mosq,
 
 		(void)write(fd, config->ca_cert.data, config->ca_cert.len);
 		close(fd);
+	} else if (config->verify_cert == ARTIK_SSL_VERIFY_REQUIRED) {
+		/* CA cert is mandatory when requesting verification */
+		ret = E_BAD_ARGS;
+		goto exit;
 	}
 
 	if (config->client_cert.data && config->client_cert.len) {
@@ -314,6 +318,7 @@ artik_mqtt_handle mqtt_create_client(artik_mqtt_config *config)
 		rc = mosquitto_will_set((struct mosquitto *) mqtt_client->mosq,
 				topic, payload_len, payload, qos, retain);
 		if (rc != MOSQ_ERR_SUCCESS) {
+			log_err("Invalid parameters for will (err=%d)", rc);
 			mqtt_destroy_client(mqtt_client);
 			return NULL;
 		}
@@ -341,12 +346,19 @@ artik_mqtt_handle mqtt_create_client(artik_mqtt_config *config)
 
 	/* set security parameters */
 	if (config->tls) {
+		artik_error ret = S_OK;
+
 		mosquitto_tls_opts_set((struct mosquitto *)mqtt_client->mosq,
 				(config->tls->verify_cert ==
 					ARTIK_SSL_VERIFY_REQUIRED) ? 1 : 0,
 				"tlsv1.2", NULL);
-		tls_write_temp_cert_files((struct mosquitto *)mqtt_client->mosq,
+		ret = tls_write_temp_cert_files((struct mosquitto *)mqtt_client->mosq,
 				config->tls);
+		if (ret != S_OK) {
+			log_err("Failed to process TLS configuration (err=%d)", ret);
+			mqtt_destroy_client(mqtt_client);
+			return NULL;
+		}
 	} else if (config->psk && config->psk->psk && config->psk->identity) {
 		mosquitto_tls_opts_set((struct mosquitto *)mqtt_client->mosq, 0,
 				"tlsv1.2", NULL);
@@ -379,7 +391,8 @@ static void destroy_client(artik_mqtt_handle handle_client)
 		if (client->config->tls)
 			tls_cleanup_temp_cert_files();
 
-		artik_release_api_module(client->loop);
+		if (client->loop)
+			artik_release_api_module(client->loop);
 		artik_list_delete_node(&requested_node, (artik_list *)client);
 	}
 }
@@ -393,10 +406,8 @@ void mqtt_destroy_client(artik_mqtt_handle handle_client)
 	log_dbg("");
 
 	if (client) {
-		/* Modify reference fr code structure replace glib begin */
-		/* glib_remove_socket_source(client); */
-		client->loop->remove_fd_watch(client->watch_id);
-		/* Modify reference fr code structure replace glib end */
+		if (client->watch_id > 0)
+			client->loop->remove_fd_watch(client->watch_id);
 		mosquitto_destroy((struct mosquitto *) client->mosq);
 		mosquitto_lib_cleanup();
 		client->mosq = NULL;
@@ -564,6 +575,20 @@ int mqtt_set_message(artik_mqtt_handle handle_client, message_callback cb,
 	return MQTT_ERROR_SUCCESS;
 }
 
+static void loop_handle_mosquitto_error(mqtt_handle_client *client, int err)
+{
+	switch (err) {
+	case MOSQ_ERR_NO_CONN:
+	case MOSQ_ERR_CONN_LOST:
+		if (client && client->on_connect)
+			client->on_connect(client->config, client->data_cb_connect,
+					E_MQTT_ERROR);
+		break;
+	default:
+		break;
+	}
+}
+
 static int loop_handler(int fd, enum watch_io io, void *handle_client)
 {
 	mqtt_handle_client *client = (mqtt_handle_client *)
@@ -579,18 +604,24 @@ static int loop_handler(int fd, enum watch_io io, void *handle_client)
 	rc = mosquitto_loop_read(client->mosq, 1);
 	if (rc != MOSQ_ERR_SUCCESS) {
 		log_dbg("mosquitto_loop_read returned %d", rc);
+		loop_handle_mosquitto_error(client, rc);
+		client->watch_id = 0;
 		return 0;
 	}
 
 	rc = mosquitto_loop_write(client->mosq, 1);
 	if (rc != MOSQ_ERR_SUCCESS) {
 		log_dbg("mosquitto_loop_write returned %d", rc);
+		loop_handle_mosquitto_error(client, rc);
+		client->watch_id = 0;
 		return 0;
 	}
 
 	rc = mosquitto_loop_misc(client->mosq);
 	if (rc != MOSQ_ERR_SUCCESS) {
 		log_dbg("mosquitto_loop_misc returned %d", rc);
+		loop_handle_mosquitto_error(client, rc);
+		client->watch_id = 0;
 		return 0;
 	}
 
@@ -637,7 +668,7 @@ int mqtt_connect(artik_mqtt_handle handle_client, const char *host, int port)
 	return MQTT_ERROR_SUCCESS;
 }
 
-void mqtt_disconnect(artik_mqtt_handle handle_client)
+int mqtt_disconnect(artik_mqtt_handle handle_client)
 {
 	mqtt_handle_client *client = (mqtt_handle_client *)
 		artik_list_get_by_handle(requested_node,
@@ -645,7 +676,7 @@ void mqtt_disconnect(artik_mqtt_handle handle_client)
 
 	log_dbg("");
 
-	mosquitto_disconnect((struct mosquitto *) client->mosq);
+	return mosquitto_disconnect((struct mosquitto *) client->mosq);
 }
 
 int mqtt_subscribe(artik_mqtt_handle handle_client, int qos,

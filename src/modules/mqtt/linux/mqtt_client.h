@@ -55,7 +55,7 @@ int mqtt_set_message(artik_mqtt_handle client, message_callback cb,
 			void *user_message_data);
 
 int mqtt_connect(artik_mqtt_handle client, const char *host, int port);
-void mqtt_disconnect(artik_mqtt_handle client);
+int mqtt_disconnect(artik_mqtt_handle client);
 int mqtt_subscribe(artik_mqtt_handle client, int qos, const char *msgtopic);
 int mqtt_unsubscribe(artik_mqtt_handle client, const char *msgtopic);
 int mqtt_publish(artik_mqtt_handle client, int qos, bool retain,

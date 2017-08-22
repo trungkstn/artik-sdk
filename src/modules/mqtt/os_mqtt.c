@@ -155,7 +155,8 @@ artik_error os_mqtt_disconnect(artik_mqtt_handle client)
 	if (!client)
 		return E_BAD_ARGS;
 
-	mqtt_disconnect(client);
+	if (mqtt_disconnect(client) != MQTT_ERROR_SUCCESS)
+		return E_MQTT_ERROR;
 
 	return S_OK;
 }
