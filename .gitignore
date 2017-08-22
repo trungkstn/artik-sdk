@@ -1,5 +1,8 @@
 *.o
 build/
+build-armhf/
+build-arm64/
+*.deb
 doc/html/
 doc/latex
 *.swp
