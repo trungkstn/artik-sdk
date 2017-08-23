@@ -126,6 +126,14 @@ static void _atomac(char *str_mac, macaddr *mac)
 		mac[i] = strtol(strtok(NULL, ":"), NULL, 16);
 }
 
+static bool _is_unicode(const char *buf)
+{
+	if (!buf)
+		return false;
+
+	return (buf[0] == '\\');
+}
+
 static int _wifi_set_security_mode(char *chflag, wifi_scan_bss *bss)
 {
 	int ret = WIFI_ERROR;
@@ -181,6 +189,8 @@ int wifi_get_scan_result(wifi_scan_bssinfo **bssinfo)
 	char *pos, *securityflag;
 	size_t len = 8192;
 	char buf[8192];
+	char buf_ssid[SSID_LENGTH * 4 + 1];
+	int len_ssid = 0;
 	wifi_scan_bss *bss = NULL;
 	int eol;
 	int i;
@@ -193,7 +203,6 @@ int wifi_get_scan_result(wifi_scan_bssinfo **bssinfo)
 	ret = _wifi_send_cmd(ctrl_conn, "SCAN_RESULTS", buf, &len);
 	if (ret != WIFI_SUCCESS)
 		return ret;
-
 
 	*bssinfo = os_malloc(sizeof(wifi_scan_bssinfo));
 	os_memset(*bssinfo, 0, sizeof(wifi_scan_bssinfo));
@@ -234,8 +243,16 @@ int wifi_get_scan_result(wifi_scan_bssinfo **bssinfo)
 		eol = os_strstr(pos, "\n") - pos;
 		if (eol < 0)
 			break;
-		strncpy(bss[i].ssid, pos, eol);
-		bss[i].ssid[eol] = '\0';
+
+		if (_is_unicode(pos)) {
+			len_ssid = (eol > (SSID_LENGTH * 4)) ? (SSID_LENGTH * 4) : eol;
+			memset(buf_ssid, 0, sizeof(buf_ssid));
+			strncpy(buf_ssid, pos, len_ssid);
+			printf_decode((u8 *)bss[i].ssid, len_ssid, buf_ssid);
+		} else {
+			len_ssid = (eol > SSID_LENGTH) ? SSID_LENGTH : eol;
+			strncpy(bss[i].ssid, pos, len_ssid);
+		}
 		pos += eol + 1;
 	}
 	(*bssinfo)->bss_list = bss;
