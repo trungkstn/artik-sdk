@@ -28,7 +28,7 @@ artik::Serial::Serial(unsigned int port_, char *name_,
   this->m_module = reinterpret_cast<artik_serial_module*>(
       artik_request_api_module("serial"));
   this->m_config.port_num = port_;
-  this->m_config.name = strdup(name_);
+  this->m_config.name = name_ ? strdup(name_) : NULL;
   this->m_config.baudrate = baudrate_;
   this->m_config.parity = parity_;
   this->m_config.data_bits = data_;
@@ -41,6 +41,8 @@ artik::Serial::Serial(artik_serial_config &config) {
   this->m_module = reinterpret_cast<artik_serial_module*>(
       artik_request_api_module("serial"));
   memcpy(&this->m_config, &config, sizeof(this->m_config));
+  if (config.name)
+    this->m_config.name = strdup(config.name);
 }
 
 artik::Serial::Serial(Serial const &val) {
@@ -58,6 +60,9 @@ artik::Serial::Serial() {
 artik::Serial::~Serial() {
   if (this->m_handle)
     this->release();
+
+  if (this->m_config.name)
+    free(this->m_config.name);
 
   artik_release_api_module(reinterpret_cast<void*>(this->m_module));
 }
@@ -132,8 +137,12 @@ void artik::Serial::set_port_num(unsigned int val) {
 }
 
 void artik::Serial::set_name(char* val) {
-  if (this->m_config.name != NULL)
+  if (!val)
+    return;
+
+  if (this->m_config.name)
     free(this->m_config.name);
+
   this->m_config.name = strdup(val);
 }
 
