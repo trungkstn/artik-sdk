@@ -159,7 +159,7 @@ artik_module_ops os_request_api_module(const char *name)
 					artik_api_modules[platid][i].object,
 					LIB_VERSION_MAJOR,
 					LIB_VERSION_MINOR, LIB_VERSION_PATCH);
-			dl_handle = (void *)dlopen(str_buf, RTLD_NOW);
+			dl_handle = (void *)dlopen(str_buf, RTLD_NOW|RTLD_GLOBAL);
 			if (!dl_handle) {
 				mutex_unlock();
 				return INVALID_MODULE;

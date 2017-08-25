@@ -36,9 +36,8 @@ int main(int ac, char **av) {
     res = security.get_certificate_sn(sn, &lenSN);
     if (res == S_OK) {
       std::cout << "Certificate Serial Number: " << std::endl;
-      std::cout << std::setfill('0');
       for (unsigned int i = 0; i < lenSN; ++i)
-        std::cout << std::setw(2) << std::hex  << sn[i];
+        std::cout << std::hex  << static_cast<int> (sn[i]);
       std::cout << std::endl;
     } else {
       std::cout << "Unable to get the serial number of the certificate."
@@ -58,9 +57,9 @@ int main(int ac, char **av) {
 
     res = security.get_random_bytes(randbytes, 32);
     if (res == S_OK) {
-      std::cout << "Random bytes: " << std::endl;
+      std::cout << "Random bytes: ";
       for (int i = 0; i < 32; ++i) {
-        std::cout << " " << randbytes[i];
+        std::cout << "0x" << std::hex << static_cast<int> (randbytes[i]) << " ";
       }
       std::cout << std::endl;
     } else {
