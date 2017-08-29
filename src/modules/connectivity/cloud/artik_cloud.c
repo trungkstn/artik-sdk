@@ -1047,8 +1047,8 @@ artik_error websocket_open_stream(artik_websocket_handle *handle,
 	artik_websocket_config config;
 	cloud_node *node;
 	char port[4];
-	char *host = ssl_config->use_se ? ARTIK_CLOUD_SECURE_WEBSOCKET_HOST :
-						ARTIK_CLOUD_WEBSOCKET_HOST;
+	char *host = (ssl_config != NULL && ssl_config->use_se) ?
+			ARTIK_CLOUD_SECURE_WEBSOCKET_HOST :	ARTIK_CLOUD_WEBSOCKET_HOST;
 	char *path = ARTIK_CLOUD_WEBSOCKET_PATH;
 
 	log_dbg("");
@@ -1066,7 +1066,16 @@ artik_error websocket_open_stream(artik_websocket_handle *handle,
 
 	snprintf(config.uri, len, "wss://%s:%s%s", host, port, path);
 
-	config.ssl_config = *ssl_config;
+	if (ssl_config != NULL)
+		config.ssl_config = *ssl_config;
+	else {
+		config.ssl_config.use_se = false;
+		config.ssl_config.verify_cert = ARTIK_SSL_VERIFY_NONE;
+		config.ssl_config.client_cert.data = NULL;
+		config.ssl_config.client_cert.len = 0;
+		config.ssl_config.client_key.data = NULL;
+		config.ssl_config.client_key.len = 0;
+	}
 
 	ret = websocket->websocket_request(handle, &config);
 	if (ret != S_OK)

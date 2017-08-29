@@ -65,7 +65,8 @@ artik_error artik_websocket_request(artik_websocket_handle *handle,
 	if (!node)
 		return E_NO_MEM;
 	node->node.handle = (ARTIK_LIST_HANDLE)node;
-	memcpy(&node->config, config, sizeof(node->config));
+	if (config != NULL)
+		memcpy(&node->config, config, sizeof(node->config));
 	*handle = (artik_websocket_handle)node;
 	return S_OK;
 }
