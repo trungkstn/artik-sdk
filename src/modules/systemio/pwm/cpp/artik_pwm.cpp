@@ -25,7 +25,7 @@ artik::Pwm::Pwm(unsigned int pin, char *name, unsigned int period,
   this->m_module = reinterpret_cast<artik_pwm_module*>(
       artik_request_api_module("pwm"));
   this->m_config.pin_num = pin;
-  this->m_config.name = strdup(name);
+  this->m_config.name = name ? strdup(name) : NULL;
   this->m_config.period = period;
   this->m_config.polarity = polarity;
   this->m_config.duty_cycle = duty_cycle;
@@ -36,6 +36,8 @@ artik::Pwm::Pwm(artik_pwm_config &config) {
   this->m_module = reinterpret_cast<artik_pwm_module*>(
       artik_request_api_module("pwm"));
   memcpy(&this->m_config, &config, sizeof(this->m_config));
+  if (config.name)
+    this->m_config.name = strdup(config.name);
 }
 
 artik::Pwm::Pwm(artik::Pwm const &val) {
@@ -124,5 +126,5 @@ void artik::Pwm::set_pin_num(unsigned int val) {
 void artik::Pwm::set_name(char *val) {
   if (this->m_config.name)
     free(this->m_config.name);
-  this->m_config.name = strdup(val);
+  this->m_config.name = val ? strdup(val) : NULL;
 }
