@@ -181,7 +181,7 @@ typedef struct {
 	 *             This handle is returned by the \ref request function.
 	 *  \param[in] reg I2C internal register address to write
 	 *  \param[in] buffer Array containing the data to write to the
-	 *             register
+	 *             register.
 	 *  \param[in] len Length of the array corresponding to the number of
 	 *             bytes to write
 	 *

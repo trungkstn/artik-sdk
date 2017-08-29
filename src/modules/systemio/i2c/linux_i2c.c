@@ -71,6 +71,11 @@ artik_error os_i2c_read(artik_i2c_config *config, char *buf, int len)
 	char devname[I2C_DEV_MAX_LEN];
 	artik_error ret = S_OK;
 
+	if (config->wordsize == I2C_WORDSIZE_INVALID ||
+		((int)config->wordsize < I2C_8BIT ||
+		(int)config->wordsize > I2C_WORDSIZE_INVALID))
+		return E_BAD_ARGS;
+
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
 	fd = open(devname, O_RDWR);
@@ -103,6 +108,11 @@ artik_error os_i2c_write(artik_i2c_config *config, char *buf, int len)
 	int fd = -1;
 	char devname[I2C_DEV_MAX_LEN];
 	artik_error ret = S_OK;
+
+	if (config->wordsize == I2C_WORDSIZE_INVALID ||
+		((int)config->wordsize < I2C_8BIT ||
+		(int)config->wordsize > I2C_WORDSIZE_INVALID))
+		return E_BAD_ARGS;
 
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
@@ -139,6 +149,11 @@ artik_error os_i2c_read_register(artik_i2c_config *config, unsigned int reg,
 	artik_error ret = S_OK;
 	struct i2c_rdwr_ioctl_data data;
 
+	if (config->wordsize == I2C_WORDSIZE_INVALID ||
+		((int)config->wordsize < I2C_8BIT ||
+		(int)config->wordsize > I2C_WORDSIZE_INVALID))
+		return E_BAD_ARGS;
+
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
 	fd = open(devname, O_RDWR);
@@ -168,7 +183,7 @@ artik_error os_i2c_read_register(artik_i2c_config *config, unsigned int reg,
 
 	data.msgs[1].addr = config->address;
 	data.msgs[1].flags = I2C_M_RD;
-	data.msgs[1].len = len * config->wordsize;
+	data.msgs[1].len = len;
 	data.msgs[1].buf = (unsigned char *)buf;
 
 	if (ioctl(fd, I2C_RDWR, &data) < 0) {
@@ -194,6 +209,11 @@ artik_error os_i2c_write_register(artik_i2c_config *config, unsigned int reg,
 	artik_error ret = S_OK;
 	struct i2c_rdwr_ioctl_data data;
 
+	if (config->wordsize == I2C_WORDSIZE_INVALID ||
+		((int)config->wordsize < I2C_8BIT ||
+		(int)config->wordsize > I2C_WORDSIZE_INVALID))
+		return E_BAD_ARGS;
+
 	snprintf(devname, I2C_DEV_MAX_LEN, "/dev/i2c-%d", config->id);
 
 	fd = open(devname, O_RDWR);
@@ -218,15 +238,15 @@ artik_error os_i2c_write_register(artik_i2c_config *config, unsigned int reg,
 
 	data.msgs[0].addr = config->address;
 	data.msgs[0].flags = 0;
-	data.msgs[0].len = (len + 1) * config->wordsize;
-	data.msgs[0].buf = malloc((len + 1) * config->wordsize);
+	data.msgs[0].len = len + config->wordsize;
+	data.msgs[0].buf = malloc(len + config->wordsize);
 	if (!data.msgs[0].buf) {
 		ret = -E_NO_MEM;
 		goto exit;
 	}
 	memcpy(data.msgs[0].buf, &reg, config->wordsize);
 	memcpy(data.msgs[0].buf + config->wordsize, buf,
-	       len * config->wordsize);
+	       len);
 
 	if (ioctl(fd, I2C_RDWR, &data) < 0) {
 		fprintf(stderr,
