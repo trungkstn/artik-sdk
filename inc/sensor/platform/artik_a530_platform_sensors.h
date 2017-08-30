@@ -60,13 +60,13 @@ static const artik_i2c_config lps25hbtr_barometer_a530_config = {
 static const artik_i2c_config lps25hbtr_temp_a530_config = {
 	1, 1000, I2C_8BIT, LPS25HBTR_ADDR
 };
-static const artik_gpio_config s5712ccdl1_a530_config = {
+static artik_gpio_config s5712ccdl1_a530_config = {
 	ARTIK_A530_GPIO2,  (char *)"gpio", GPIO_IN, GPIO_EDGE_BOTH, 0, NULL
 };
-static const artik_spi_config k6ds3_xl_a530_config = {
+static artik_spi_config k6ds3_xl_a530_config = {
 	2, 0, SPI_MODE0, 8, 1000000
 };
-static const artik_spi_config k6ds3_gyro_a530_config = {
+static artik_spi_config k6ds3_gyro_a530_config = {
 	2, 0, SPI_MODE0, 8, 1000000
 };
 

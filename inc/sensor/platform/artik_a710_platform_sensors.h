@@ -43,26 +43,6 @@
 #include <devices/S5712CCDL1_I4T1U.h>
 #include <devices/LPS25HBTR.h>
 
-static const artik_i2c_config accelerometer_a710_config = {
-	1, 1000, I2C_8BIT, 0x0018
-};
-static const artik_adc_config humidity_a710_config = {
-	ARTIK_A710_ADC1, (char *)"adc", NULL
-};
-static const artik_adc_config light_a710_config = {
-	ARTIK_A710_ADC4, (char *)"adc", NULL
-};
-static const artik_adc_config temperature_a710_config = {
-	ARTIK_A710_ADC3, (char *)"adc", NULL
-};
-static const artik_gpio_config proximity_a710_config = {
-	ARTIK_A710_GPIO0,  (char *)"gpio",
-	GPIO_IN, GPIO_EDGE_BOTH, 0, NULL
-};
-static const artik_gpio_config infred_flame_a710_config = {
-	ARTIK_A710_GPIO1,  (char *)"gpio", GPIO_IN, GPIO_EDGE_BOTH, 0, NULL
-};
-
 /* SENSOR BOARD */
 
 static const artik_i2c_config hts221_temp_config = {
@@ -80,7 +60,7 @@ static const artik_i2c_config lps25hbtr_barometer_config = {
 static const artik_i2c_config lps25hbtr_temp_config = {
 	1, 1000, I2C_8BIT, LPS25HBTR_ADDR
 };
-static const artik_gpio_config s5712ccdl1_config = {
+static  artik_gpio_config s5712ccdl1_config = {
 	ARTIK_A710_GPIO2,  (char *)"gpio", GPIO_IN,
 	GPIO_EDGE_BOTH, 0, NULL
 };
