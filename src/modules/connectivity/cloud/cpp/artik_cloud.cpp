@@ -86,12 +86,12 @@ artik_error artik::Cloud::add_device(const char *user_id, const char *dt_id,
 
 artik_error artik::Cloud::update_device_token(const char *device_id,
     char **response, artik_ssl_config *ssl) {
-  return m_module->get_device_token(m_token, device_id, response, ssl);
+  return m_module->update_device_token(m_token, device_id, response, ssl);
 }
 
 artik_error artik::Cloud::delete_device_token(const char *device_id,
     char **response, artik_ssl_config *ssl) {
-  return m_module->get_device_token(m_token, device_id, response, ssl);
+  return m_module->delete_device_token(m_token, device_id, response, ssl);
 }
 
 artik_error artik::Cloud::delete_device(const char *device_id, char **response,
