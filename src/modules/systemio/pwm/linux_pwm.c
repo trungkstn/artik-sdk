@@ -96,7 +96,6 @@ static artik_error os_pwm_ioctl(artik_pwm_user_data_t *user_data,
 			res = E_INVALID_VALUE;
 			break;
 		case EBADF:
-		case ENOSPC:
 			res = E_BAD_ARGS;
 			break;
 		case EDESTADDRREQ:

@@ -88,15 +88,27 @@ artik_error artik::Pwm::disable(void) {
 }
 
 artik_error artik::Pwm::set_period(unsigned int val) {
-  return this->m_module->set_period(this->m_handle, val);
+  artik_error ret;
+  ret = this->m_module->set_period(this->m_handle, val);
+  if (ret == S_OK)
+    this->m_config.period = val;
+  return ret;
 }
 
 artik_error artik::Pwm::set_polarity(artik_pwm_polarity_t val) {
-  return this->m_module->set_polarity(this->m_handle, val);
+  artik_error ret;
+  ret = this->m_module->set_polarity(this->m_handle, val);
+  if (ret == S_OK)
+    this->m_config.polarity = val;
+  return ret;
 }
 
 artik_error artik::Pwm::set_duty_cycle(unsigned int val) {
-  return this->m_module->set_duty_cycle(this->m_handle, val);
+  artik_error ret;
+  ret = this->m_module->set_duty_cycle(this->m_handle, val);
+  if (ret == S_OK)
+    this->m_config.duty_cycle = val;
+  return ret;
 }
 
 unsigned int artik::Pwm::get_pin_num(void) const {
