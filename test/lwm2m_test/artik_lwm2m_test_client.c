@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <errno.h>
+#include <linux/limits.h>
 
 #include <artik_module.h>
 #include <artik_platform.h>
@@ -44,6 +46,11 @@ static char akc_device_id[UUID_MAX_LEN] = "< DM enabled Artik"\
 static char akc_device_token[UUID_MAX_LEN] = "< DM enabled Artik"\
 					" Cloud device token >";
 static char akc_uri[URI_MAX_LEN] = "coaps://coaps-api.artik.cloud:5686";
+static char akc_device_certificate_path[PATH_MAX] = "";
+static char akc_device_private_key_path[PATH_MAX] = "";
+static char akc_lwm2m_cert_path[PATH_MAX] = "";
+static bool akc_use_se = false;
+static bool akc_verify_peer = false;
 
 static void prv_change_obj(char *buffer, void *user_data)
 {
@@ -208,11 +215,62 @@ static void test_serialization(artik_lwm2m_handle handle)
 		fprintf(stdout, "Failed to serialize array of string : %s\n",
 								error_msg(res));
 }
+static bool fill_buffer_from_file(const char *file, char **pbuffer)
+{
+	FILE *stream = NULL;
+	long size = 0;
+	char *buffer = NULL;
+
+	if (access(file, F_OK) != 0) {
+		fprintf(stderr, "cannot access '%s': %s\n", file, strerror(errno));
+		return false;
+	}
+
+	stream = fopen(file, "r");
+	if (!stream) {
+		fprintf(stderr, "cannot open '%s': %s\n", file, strerror(errno));
+		goto error;
+	}
+
+	if (fseek(stream, 0, SEEK_END) != 0) {
+		fprintf(stderr, "cannot seek '%s': %s\n", file, strerror(errno));
+		goto error;
+	}
+
+	size = ftell(stream);
+	if (size < 0) {
+		fprintf(stderr, "cannot tell '%s': %s\n", file, strerror(errno));
+		goto error;
+	}
+
+	rewind(stream);
+	buffer = malloc(size * sizeof(char));
+	if (!buffer) {
+		fprintf(stderr, "cannot allocate %ld bytes\n", size);
+		goto error;
+	}
+
+	fread(buffer, sizeof(char), size, stream);
+	fclose(stream);
+
+	*pbuffer = buffer;
+	return true;
+
+error:
+	if (buffer)
+		free(buffer);
+
+	if (stream)
+		fclose(stream);
+
+	return false;
+}
 
 artik_error test_lwm2m_default(void)
 {
 	artik_error ret = S_OK;
 	artik_lwm2m_handle client_h = NULL;
+	artik_ssl_config ssl_config;
 	artik_lwm2m_config config;
 	char *ips[2] = {"192.168.1.27", NULL};
 	char *routes[2] = {"192.168.1.1", NULL};
@@ -222,13 +280,51 @@ artik_error test_lwm2m_default(void)
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 
 	memset(&config, 0, sizeof(config));
+	memset(&ssl_config, 0, sizeof(ssl_config));
 	config.server_id = 123;
 	config.server_uri = akc_uri;
 	config.name = akc_device_id;
 	config.tls_psk_identity = akc_device_id;
 	config.tls_psk_key = akc_device_token;
 	config.lifetime = 30;
+	config.ssl_config = &ssl_config;
 
+	if (akc_verify_peer)
+		ssl_config.verify_cert = ARTIK_SSL_VERIFY_REQUIRED;
+
+	if (strlen(akc_lwm2m_cert_path) > 0) {
+		if (!fill_buffer_from_file(akc_lwm2m_cert_path, &ssl_config.ca_cert.data)) {
+			fprintf(stdout, "TEST: failed\n");
+			return -1;
+		}
+
+		ssl_config.ca_cert.len = strlen(ssl_config.ca_cert.data);
+		fprintf(stderr, "TEST: server certificate or root_ca from %s\n", akc_lwm2m_cert_path);
+	}
+
+	if (akc_use_se) {
+		ssl_config.use_se = true;
+		fprintf(stdout, "TEST: device certificate from SE\n");
+	} else if (strlen(akc_device_certificate_path) > 0 && strlen(akc_device_private_key_path) > 0) {
+		if (!fill_buffer_from_file(akc_device_certificate_path, &ssl_config.client_cert.data)) {
+			fprintf(stdout, "TEST: failed\n");
+			return -1;
+		}
+		ssl_config.client_cert.len = strlen(ssl_config.client_cert.data);
+
+		if (!fill_buffer_from_file(akc_device_private_key_path, &ssl_config.client_key.data)) {
+			fprintf(stdout, "TEST: failed\n");
+			return -1;
+		}
+		ssl_config.client_key.len = strlen(ssl_config.client_key.data);
+
+		fprintf(stdout, "TEST: device certificate from %s and %s\n",
+				akc_device_certificate_path, akc_device_private_key_path);
+	} else {
+		fprintf(stdout, "TEST: PSK mode\n");
+	}
+
+	fprintf(stdout, "TEST: %s akc_verify_peer=%d\n", __func__, akc_verify_peer);
 	fprintf(stdout, "TEST: %s uri=%s\n", __func__, config.server_uri);
 	fprintf(stdout, "TEST: %s id=%s\n", __func__, config.tls_psk_identity);
 	fprintf(stdout, "TEST: %s key=%s\n", __func__, config.tls_psk_key);
@@ -288,7 +384,7 @@ int main(UNUSED int argc, UNUSED char *argv[])
 	artik_error ret = S_OK;
 
 
-	while ((opt = getopt(argc, argv, "u:i:k:")) != -1) {
+	while ((opt = getopt(argc, argv, "na:sc:p:u:i:k:")) != -1) {
 		switch (opt) {
 		case 'u':
 			strncpy(akc_uri, optarg, URI_MAX_LEN);
@@ -299,6 +395,21 @@ int main(UNUSED int argc, UNUSED char *argv[])
 		case 'k':
 			strncpy(akc_device_token, optarg, UUID_MAX_LEN);
 			break;
+		case 'c':
+			strncpy(akc_device_certificate_path, optarg, PATH_MAX);
+			break;
+		case 'p':
+			strncpy(akc_device_private_key_path, optarg, PATH_MAX);
+			break;
+		case 'a':
+			strncpy(akc_lwm2m_cert_path, optarg, PATH_MAX);
+			break;
+		case 's':
+			akc_use_se = true;
+			break;
+		case 'n':
+			akc_verify_peer = true;
+			break;
 		default:
 			fprintf(stdout, "Usage: lwm2m-test <options>\r\n");
 			fprintf(stdout, "\tOptions:\r\n");
@@ -306,6 +417,9 @@ int main(UNUSED int argc, UNUSED char *argv[])
 				"coaps://lwm2mserv.com:5683\")\r\n");
 			fprintf(stdout, "\t\t-i PSK Public identity\r\n");
 			fprintf(stdout, "\t\t-k PSK Secret key\r\n");
+			fprintf(stdout, "\t\t-c Path to the client certificate\r\n");
+			fprintf(stdout, "\t\t-p Path to the private key\r\n");
+			fprintf(stdout, "\t\t-s Use client certificate stored in the SE\r\n");
 			return 0;
 		}
 	}

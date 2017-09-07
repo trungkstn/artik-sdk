@@ -20,6 +20,7 @@
 #include <artik_platform.h>
 #include <artik_loop.h>
 #include <artik_log.h>
+#include <artik_security.h>
 
 #include <artik_lwm2m.h>
 #include <artik_list.h>
@@ -35,6 +36,8 @@ typedef struct {
 	void *callbacks_params[ARTIK_LWM2M_EVENT_COUNT];
 	int service_cbk_id;
 	artik_loop_module *loop_module;
+	artik_security_module *security_module;
+	artik_security_handle security_handle;
 } lwm2m_node;
 
 typedef struct {
@@ -190,6 +193,8 @@ static void on_resource_changed(void *user_data, void *extra)
 artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 				artik_lwm2m_config *config)
 {
+	artik_security_module *security = NULL;
+	artik_security_handle sec_handle = NULL;
 	lwm2m_node *node = NULL;
 	object_container_t objects;
 	object_security_server_t server;
@@ -212,12 +217,82 @@ artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 	memset(&server, 0, sizeof(server));
 	strncpy(server.serverUri, config->server_uri, LWM2M_MAX_STR_LEN);
 	strncpy(server.client_name, config->name, LWM2M_MAX_STR_LEN);
-	if (config->tls_psk_identity && config->tls_psk_key) {
+	server.securityMode = LWM2M_SEC_MODE_PSK;
+
+	if (config->ssl_config) {
+		if (!config->tls_psk_key) {
+			artik_list_delete_node(&nodes, (artik_list *)node);
+			return E_BAD_ARGS;
+		}
+
+		server.verifyCert = config->ssl_config->verify_cert == ARTIK_SSL_VERIFY_REQUIRED;
+
+		if (!config->ssl_config->use_se
+			&& config->ssl_config->client_cert.data && config->ssl_config->client_cert.len
+			&& config->ssl_config->client_key.data && config->ssl_config->client_key.len) {
+			server.clientCertificateOrPskId = strdup(config->ssl_config->client_cert.data);
+			server.privateKey = strdup(config->ssl_config->client_key.data);
+			server.securityMode = LWM2M_SEC_MODE_CERT;
+		} else if (config->ssl_config->use_se) {
+			security = (artik_security_module *)artik_request_api_module("security");
+			if (!security) {
+				artik_list_delete_node(&nodes, (artik_list *)node);
+				log_dbg("Unable to request security module");
+				return E_SECURITY_ERROR;
+			}
+
+			ret = security->request(&sec_handle);
+			if (ret != S_OK) {
+				artik_list_delete_node(&nodes, (artik_list *)node);
+				log_dbg("Unable to request security handle");
+				artik_release_api_module(security);
+				return ret;
+			}
+
+			ret = security->get_certificate(sec_handle, &server.clientCertificateOrPskId);
+			if (ret != S_OK) {
+				artik_list_delete_node(&nodes, (artik_list *)node);
+				security->release(sec_handle);
+				artik_release_api_module(security);
+				log_dbg("Unable to get certificate (err %d)", ret);
+				return ret;
+			}
+
+			ret = security->get_key_from_cert(sec_handle, server.clientCertificateOrPskId,
+											&server.privateKey);
+			if (ret != S_OK) {
+				artik_list_delete_node(&nodes, (artik_list *)node);
+				security->release(sec_handle);
+				log_dbg("Unable to get private key");
+				artik_release_api_module(security);
+				return ret;
+			}
+
+			node->security_module = security;
+			node->security_handle = sec_handle;
+			server.securityMode = LWM2M_SEC_MODE_CERT;
+		} else if (!config->ssl_config->client_cert.data && !config->ssl_config->client_cert.len
+				   && !config->ssl_config->client_key.data && !config->ssl_config->client_key.len) {
+			if (!config->tls_psk_identity)
+				return E_BAD_ARGS;
+
+			server.clientCertificateOrPskId = strdup(config->tls_psk_identity);
+			log_dbg("Copy PSK parameters (%s/%s)", config->tls_psk_identity,
+					config->tls_psk_key);
+		} else {
+			return E_BAD_ARGS;
+		}
+
+		server.token = strdup(config->tls_psk_key);
+
+		if (config->ssl_config->ca_cert.data)
+			server.serverCertificate = strdup(config->ssl_config->ca_cert.data);
+
+	} else if (config->tls_psk_identity && config->tls_psk_key) {
+		server.clientCertificateOrPskId = strdup(config->tls_psk_identity);
+		server.token = strdup(config->tls_psk_key);
 		log_dbg("Copy PSK parameters (%s/%s)", config->tls_psk_identity,
 							config->tls_psk_key);
-		strncpy(server.bsPskId, config->tls_psk_identity,
-							LWM2M_MAX_STR_LEN);
-		strncpy(server.psk, config->tls_psk_key, LWM2M_MAX_STR_LEN);
 	}
 	server.lifetime = config->lifetime;
 	server.serverId = config->server_id;
@@ -250,8 +325,14 @@ artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 	}
 
 	/* Configure and start the client */
-	node->client = lwm2m_client_start(&objects);
+	node->client = lwm2m_client_start(&objects, server.serverCertificate);
 	if (!node->client) {
+		log_dbg("lwm2m_client error");
+		if (security && sec_handle) {
+			security->release(sec_handle);
+			artik_release_api_module(security);
+		}
+
 		artik_list_delete_node(&nodes, (artik_list *)node);
 		return E_LWM2M_ERROR;
 	}
@@ -261,7 +342,7 @@ artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 			100, on_lwm2m_service_callback, (void *)node);
 	if (ret != S_OK) {
 		log_err("Failed to start timeout callback for LWM2M servicing");
-		os_lwm2m_client_disconnect(node->client);
+		os_lwm2m_client_disconnect(node);
 		goto exit;
 	}
 
@@ -282,6 +363,12 @@ artik_error os_lwm2m_client_disconnect(artik_lwm2m_handle handle)
 		return E_BAD_ARGS;
 
 	lwm2m_client_stop(node->client);
+
+	if (node->security_module && node->security_handle) {
+		node->security_module->release(node->security_handle);
+		artik_release_api_module(node->security_module);
+	}
+
 	artik_release_api_module(node->loop_module);
 	artik_list_delete_node(&nodes, (artik_list *)node);
 

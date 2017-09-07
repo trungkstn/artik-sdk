@@ -25,6 +25,7 @@ extern "C" {
 
 #include "artik_error.h"
 #include "artik_types.h"
+#include "artik_ssl.h"
 
 /*! \file artik_lwm2m.h
  *
@@ -179,21 +180,45 @@ typedef struct {
 	 */
 	int lifetime;
 	/*!
-	 * \brief Certificate path for certificate based DTLS/TLS connection
-	 */
-	char *tls_cert_path;
-	/*!
-	 * \brief Key path for certificate based DTLS/TLS connection
-	 */
-	char *tls_key_path;
-	/*!
 	 * \brief Public Identity for PSK based DTLS/TLS connection
 	 */
 	char *tls_psk_identity;
 	/*!
 	 * \brief Secret key for PSK based DTLS/TLS connection
+	 *
+	 * This parameter is needed in Certificate mode, beacause in TCP
+	 * the PSK is passed in query parameters.
 	 */
 	char *tls_psk_key;
+
+	/*!
+	 * \brief SSL configuration.
+	 *
+	 * The Certificate mode is used if \ref artik_ssl_config.use_se is true or
+	 * \ref artik_ssl_config.client_cert.data and \ref artik_ssl_config.client_key.data
+	 *  are non null.
+	 *
+	 * You do not need to fill \ref artik_ssl_config.client_cert
+	 * and \ref artik_ssl_config.client_key when \ref arik_ssl_config.use_se is true.
+	 *
+	 * for certificate based DTLS connection:
+	 *     - The field \ref artik_ssl_config.ca_cert must be filled and must
+	 * be the server certificate.
+	 *
+	 *     - The field \ref artik_ssl_config.verify_cert is ignored when you use DTLS.
+	 *
+	 * for PSK based DTLS connection:
+	 *     - The fields \ref artik_ssl_config.ca_cert and \ref artik_ssl_config.verify_cert
+	 * are not used.
+	 *
+	 * for PSK/Certificate based TLS connection:
+	 *     - The field \ref artik_ssl_config.ca_cert is a root CA. Can be NULL.
+	 *
+	 *     - The field \ref artik_ssl_config.verify_cert is not ignored.
+	 *
+	 */
+	artik_ssl_config *ssl_config;
+
 	/*!
 	 * \brief LWM2M objects to expose
 	 */
