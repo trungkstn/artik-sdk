@@ -24,15 +24,33 @@
 artik_error os_http_get_stream(const char *url, artik_http_headers * headers,
 			int *status, artik_http_stream_callback callback,
 			void *user_data, artik_ssl_config * ssl);
+artik_error os_http_get_stream_async(const char *url,
+			artik_http_headers *headers,
+			artik_http_stream_callback stream_callback,
+			artik_http_response_callback response_callback,
+			void *user_data,
+			artik_ssl_config *ssl);
 artik_error os_http_get(const char *url, artik_http_headers *headers,
 			char **response, int *status, artik_ssl_config *ssl);
+artik_error os_http_get_async(const char *url, artik_http_headers *headers,
+			artik_http_response_callback callback, void *user_data,
+			artik_ssl_config *ssl);
 artik_error os_http_post(const char *url, artik_http_headers *headers,
 			const char *body, char **response, int *status,
 			artik_ssl_config *ssl);
+artik_error os_http_post_async(const char *url, artik_http_headers *headers,
+			const char *body, artik_http_response_callback callback,
+			void *user_data, artik_ssl_config *ssl);
 artik_error os_http_put(const char *url, artik_http_headers *headers,
 			const char *body, char **response, int *status,
 			artik_ssl_config *ssl);
+artik_error os_http_put_async(const char *url, artik_http_headers *headers,
+			const char *body, artik_http_response_callback callback,
+			void *user_data, artik_ssl_config *ssl);
 artik_error os_http_delete(const char *url, artik_http_headers *headers,
 			char **response, int *status, artik_ssl_config *ssl);
+artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
+			artik_http_response_callback callback, void *user_data,
+			artik_ssl_config *ssl);
 
 #endif	/* OS_HTTP_H_ */

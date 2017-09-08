@@ -27,15 +27,12 @@
 #include <artik_module.h>
 #include <artik_security.h>
 #include <artik_http.h>
+#include <artik_loop.h>
 #include "os_http.h"
 
 #define WAIT_CONNECT_POLLING_MS	500
 #define FLAG_EVENT		(0x1 << 0)
 #define MAX(a, b)		((a > b) ? a : b)
-#define CB_CONTAINER		((artik_websocket_container *)\
-				lws_get_protocol(wsi)->user)
-#define CB_FDS			(((artik_websocket_user_data *)\
-				CB_CONTAINER->fds)->fdset)
 #define NUM_FDS			2
 #define FD_CLOSE		0
 #define FD_CONNECT		1
@@ -52,6 +49,23 @@ typedef struct {
 	artik_http_stream_callback callback;
 	void *user_data;
 } stream_callback_params;
+
+typedef struct {
+	artik_http_response_callback callback;
+	void *user_data;
+} response_callback_params;
+
+typedef struct {
+	int loop_process_id;
+	const char *url;
+	artik_http_headers *headers;
+	const char *body;
+	char *response;
+	int status;
+	artik_ssl_config *ssl;
+	stream_callback_params stream_cb_params;
+	response_callback_params response_cb_params;
+} os_http_interface;
 
 static pthread_mutex_t lock;
 static bool lock_initialized = false;
@@ -241,6 +255,107 @@ static size_t stream_callback(void *ptr, size_t size, size_t nmemb,
 	return (size_t)(cb_params->callback)(data, len, cb_params->user_data);
 }
 
+static int os_http_process_get_stream(void *user_data)
+{
+	os_http_interface *interface = (os_http_interface *)user_data;
+
+	log_dbg("");
+
+	if (os_http_get_stream(interface->url, interface->headers,
+		&interface->status, interface->stream_cb_params.callback,
+		interface->stream_cb_params.user_data, interface->ssl)) {
+		log_err("os_http_process_get_stream");
+		return 0;
+	}
+
+	if (interface->response_cb_params.callback)
+		interface->response_cb_params.callback(interface->status,
+			interface->response,
+			interface->response_cb_params.user_data);
+
+	return 0;
+}
+
+static int os_http_process_get(void *user_data)
+{
+	os_http_interface *interface = (os_http_interface *)user_data;
+
+	log_dbg("");
+
+	if (os_http_get(interface->url, interface->headers,
+		&interface->response, &interface->status, interface->ssl)) {
+		log_err("os_http_process_get");
+		return 0;
+	}
+
+	if (interface->response_cb_params.callback)
+		interface->response_cb_params.callback(interface->status,
+			interface->response,
+			interface->response_cb_params.user_data);
+
+	return 0;
+}
+
+static int os_http_process_post(void *user_data)
+{
+	os_http_interface *interface = (os_http_interface *)user_data;
+
+	log_dbg("");
+
+	if (os_http_post(interface->url, interface->headers, interface->body,
+		&interface->response, &interface->status, interface->ssl)) {
+		log_err("os_http_process_post");
+		return 0;
+	}
+
+	if (interface->response_cb_params.callback)
+		interface->response_cb_params.callback(interface->status,
+			interface->response,
+			interface->response_cb_params.user_data);
+
+	return 0;
+}
+
+static int os_http_process_put(void *user_data)
+{
+	os_http_interface *interface = (os_http_interface *)user_data;
+
+	log_dbg("");
+
+	if (os_http_put(interface->url, interface->headers, interface->body,
+		&interface->response, &interface->status, interface->ssl)) {
+		log_err("os_http_process_put");
+		return 0;
+	}
+
+	if (interface->response_cb_params.callback)
+		interface->response_cb_params.callback(interface->status,
+			interface->response,
+			interface->response_cb_params.user_data);
+
+	return 0;
+}
+
+static int os_http_process_delete(void *user_data)
+{
+	os_http_interface *interface = (os_http_interface *)user_data;
+
+	log_dbg("");
+
+	if (os_http_delete(interface->url, interface->headers,
+		&interface->response, &interface->status, interface->ssl)) {
+		log_err("os_http_process_delete");
+		return 0;
+	}
+
+	if (interface->response_cb_params.callback)
+		interface->response_cb_params.callback(interface->status,
+			interface->response,
+			interface->response_cb_params.user_data);
+
+	return 0;
+}
+
 artik_error os_http_get_stream(const char *url, artik_http_headers *headers,
 		int *status, artik_http_stream_callback callback,
 		void *user_data, artik_ssl_config *ssl)
@@ -390,6 +505,43 @@ exit:
 	return ret;
 }
 
+artik_error os_http_get_stream_async(const char *url,
+	artik_http_headers *headers,
+	artik_http_stream_callback stream_callback,
+	artik_http_response_callback response_callback,
+	void *user_data,
+	artik_ssl_config *ssl)
+{
+	os_http_interface *interface;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+
+	log_dbg("");
+
+	interface = malloc(sizeof(os_http_interface));
+
+	if (interface == NULL) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memset(interface, 0, sizeof(os_http_interface));
+
+	interface->url = url;
+	interface->headers = headers;
+	interface->stream_cb_params.callback = stream_callback;
+	interface->stream_cb_params.user_data = user_data;
+	interface->response_cb_params.callback = response_callback;
+	interface->response_cb_params.user_data = user_data;
+	interface->ssl = ssl;
+
+	if (loop->add_idle_callback(&interface->loop_process_id,
+		os_http_process_get_stream, (void *)interface) != S_OK)
+		return E_HTTP_ERROR;
+
+	return S_OK;
+}
+
 artik_error os_http_get(const char *url, artik_http_headers *headers,
 	char **response, int *status, artik_ssl_config *ssl)
 {
@@ -535,6 +687,38 @@ exit:
 		artik_release_api_module(security);
 
 	return ret;
+}
+
+artik_error os_http_get_async(const char *url, artik_http_headers *headers,
+	artik_http_response_callback callback, void *user_data,
+	artik_ssl_config *ssl)
+{
+	os_http_interface *interface;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+
+	log_dbg("");
+
+	interface = malloc(sizeof(os_http_interface));
+
+	if (interface == NULL) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memset(interface, 0, sizeof(os_http_interface));
+
+	interface->url = url;
+	interface->headers = headers;
+	interface->response_cb_params.callback = callback;
+	interface->response_cb_params.user_data = user_data;
+	interface->ssl = ssl;
+
+	if (loop->add_idle_callback(&interface->loop_process_id,
+		os_http_process_get, (void *)interface) != S_OK)
+		return E_HTTP_ERROR;
+
+	return S_OK;
 }
 
 artik_error os_http_post(const char *url, artik_http_headers *headers,
@@ -692,6 +876,39 @@ exit:
 	return ret;
 }
 
+artik_error os_http_post_async(const char *url, artik_http_headers *headers,
+	const char *body, artik_http_response_callback callback,
+	void *user_data, artik_ssl_config *ssl)
+{
+	os_http_interface *interface;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+
+	log_dbg("");
+
+	interface = malloc(sizeof(os_http_interface));
+
+	if (interface == NULL) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memset(interface, 0, sizeof(os_http_interface));
+
+	interface->url = url;
+	interface->headers = headers;
+	interface->body = body;
+	interface->response_cb_params.callback = callback;
+	interface->response_cb_params.user_data = user_data;
+	interface->ssl = ssl;
+
+	if (loop->add_idle_callback(&interface->loop_process_id,
+		os_http_process_post, (void *)interface) != S_OK)
+		return E_HTTP_ERROR;
+
+	return S_OK;
+}
+
 artik_error os_http_put(const char *url, artik_http_headers *headers,
 	const char *body, char **response, int *status, artik_ssl_config *ssl)
 {
@@ -843,6 +1060,39 @@ exit:
 	return ret;
 }
 
+artik_error os_http_put_async(const char *url, artik_http_headers *headers,
+	const char *body, artik_http_response_callback callback,
+	void *user_data, artik_ssl_config *ssl)
+{
+	os_http_interface *interface;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+
+	log_dbg("");
+
+	interface = malloc(sizeof(os_http_interface));
+
+	if (interface == NULL) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memset(interface, 0, sizeof(os_http_interface));
+
+	interface->url = url;
+	interface->headers = headers;
+	interface->body = body;
+	interface->response_cb_params.callback = callback;
+	interface->response_cb_params.user_data = user_data;
+	interface->ssl = ssl;
+
+	if (loop->add_idle_callback(&interface->loop_process_id,
+		os_http_process_put, (void *)interface) != S_OK)
+		return E_HTTP_ERROR;
+
+	return S_OK;
+}
+
 artik_error os_http_delete(const char *url, artik_http_headers *headers,
 	char **response, int *status, artik_ssl_config *ssl)
 {
@@ -989,4 +1239,36 @@ exit:
 		artik_release_api_module(security);
 
 	return ret;
+}
+
+artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
+	artik_http_response_callback callback, void *user_data,
+	artik_ssl_config *ssl)
+{
+	os_http_interface *interface;
+	artik_loop_module *loop = (artik_loop_module *)
+					artik_request_api_module("loop");
+
+	log_dbg("");
+
+	interface = malloc(sizeof(os_http_interface));
+
+	if (interface == NULL) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memset(interface, 0, sizeof(os_http_interface));
+
+	interface->url = url;
+	interface->headers = headers;
+	interface->response_cb_params.callback = callback;
+	interface->response_cb_params.user_data = user_data;
+	interface->ssl = ssl;
+
+	if (loop->add_idle_callback(&interface->loop_process_id,
+		os_http_process_delete, (void *)interface) != S_OK)
+		return E_HTTP_ERROR;
+
+	return S_OK;
 }

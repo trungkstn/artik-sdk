@@ -42,17 +42,33 @@ class Http {
   Http();
   ~Http();
 
-  artik_error get_stream(const char* url, artik_http_headers* headers,
+  artik_error get_stream(const char *url, artik_http_headers *headers,
       int *status, artik_http_stream_callback callback, void *user_data,
       artik_ssl_config *ssl);
-  artik_error get(const char* url, artik_http_headers* headers, char** response,
+  artik_error get_stream_async(const char* url, artik_http_headers* headers,
+      artik_http_stream_callback stream_callback,
+      artik_http_response_callback response_callback, void *user_data,
+      artik_ssl_config *ssl);
+  artik_error get(const char *url, artik_http_headers *headers, char **response,
       int *status, artik_ssl_config *ssl);
-  artik_error post(const char* url, artik_http_headers* headers,
-      const char* body, char** response, int *, artik_ssl_config *ssl);
-  artik_error put(const char* url, artik_http_headers* headers,
-      const char* body, char** response, int *status, artik_ssl_config *ssl);
-  artik_error del(const char* url, artik_http_headers* headers, char** response,
+  artik_error get_async(const char *url, artik_http_headers *headers,
+      artik_http_response_callback callback, void *user_data,
+      artik_ssl_config *ssl);
+  artik_error post(const char *url, artik_http_headers *headers,
+      const char *body, char **response, int *status, artik_ssl_config *ssl);
+  artik_error post_async(const char *url, artik_http_headers *headers,
+      const char *body, artik_http_response_callback callback, void *user_data,
+      artik_ssl_config *ssl);
+  artik_error put(const char *url, artik_http_headers *headers,
+      const char *body, char **response, int *status, artik_ssl_config *ssl);
+  artik_error put_async(const char *url, artik_http_headers *headers,
+      const char *body, artik_http_response_callback callback, void *user_data,
+      artik_ssl_config *ssl);
+  artik_error del(const char *url, artik_http_headers *headers, char **response,
       int *status, artik_ssl_config *ssl);
+  artik_error del_async(const char *url, artik_http_headers *headers,
+      artik_http_response_callback callback, void *user_data,
+      artik_ssl_config *ssl);
 };
 
 }  // namespace artik

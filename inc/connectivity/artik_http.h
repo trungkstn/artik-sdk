@@ -88,10 +88,24 @@ typedef struct {
  *  \param[in] data Received data
  *  \param[in] len Length of the received data
  *  \param[in] user_data The user data passed from the callback
- *   function
+ *             function
  */
 typedef int (*artik_http_stream_callback)(char *data,
 				unsigned int len, void *user_data);
+
+/*!
+ *  \brief Response callback prototype
+ *
+ *  \param[in] status Status filled up by
+ *	       the function with the server's response status
+ *  \param[in] response String allocated and
+ *             filled up by the function with the
+ *             response body returned by the server.
+ *  \param[in] user_data The user data passed from the callback
+ *             function
+ */
+typedef void (*artik_http_response_callback)(int status, char *response,
+				void *user_data);
 
 /*! \struct artik_http_module
  *
@@ -127,6 +141,30 @@ typedef struct {
 				void *user_data,
 				artik_ssl_config * ssl);
 	/*!
+	 *  \brief Perform a GET request on streaming data
+	 *         asynchronously
+	 *
+	 *  \param[in] url URL to request
+	 *  \param[in] headers Pointer to the structure object
+	 *             containing the HTTP headers to send
+	 *  \param[in] stream_callback Function called upon receiving new
+	 *             data from the stream
+	 *  \param[in] response_callback Function called upon receiving response
+	 *             returned by the server
+	 *  \param[in] user_data Pointer to user data that will be
+	 *             passed as a parameter to the callbacks functions
+	 *  \param[in] ssl SSL configuration to use when targeting
+	 *             https urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*get_stream_async) (const char *url,
+				artik_http_headers * headers,
+				artik_http_stream_callback stream_callback,
+				artik_http_response_callback response_callback,
+				void *user_data,
+				artik_ssl_config * ssl);
+	/*!
 	 *  \brief Perform a GET request
 	 *
 	 *  \param[in] url URL to request
@@ -139,7 +177,7 @@ typedef struct {
 	 *              function after use.
 	 *  \param[out] status Pointer to the status filled up by
 	 *              the function with the server's
-	 *          response status
+	 *              response status
 	 *  \param[in] ssl SSL configuration to use when targeting
 	 *             https urls. Can be NULL.
 	 *
@@ -149,6 +187,26 @@ typedef struct {
 			   artik_http_headers * headers,
 			   char **response, int *status,
 			   artik_ssl_config * ssl);
+	/*!
+	 *  \brief Perform a GET request asynchronously
+	 *
+	 *  \param[in] url URL to request
+	 *  \param[in] headers Pointer to the structure object
+	 *             containing the HTTP headers to send
+	 *  \param[in] callback Function called upon receiving response
+	 *             returned by the server
+	 *  \param[in] user_data Pointer to user data that will be
+	 *             passed as a parameter to the callback function
+	 *  \param[in] ssl SSL configuration to use when targeting
+	 *             https urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*get_async) (const char *url,
+				artik_http_headers * headers,
+				artik_http_response_callback callback,
+				void *user_data,
+				artik_ssl_config * ssl);
 	/*!
 	 *  \brief Perform a POST request
 	 *
@@ -164,7 +222,7 @@ typedef struct {
 	 *              function after use.
 	 *  \param[out] status Pointer to the status filled up
 	 *              by the function with the server's
-	 *          response status
+	 *              response status
 	 *  \param[in] ssl SSL configuration to use when targeting
 	 *             https urls. Can be NULL.
 	 *
@@ -174,6 +232,29 @@ typedef struct {
 			    artik_http_headers * headers,
 			    const char *body, char **response,
 			    int *status, artik_ssl_config * ssl);
+	/*!
+	 *  \brief Perform a POST request asynchronously
+	 *
+	 *  \param[in] url URL to request
+	 *  \param[in] headers Pointer to the structure object
+	 *             containing the HTTP headers to send
+	 *  \param[in] body String containing the body data to
+	 *             send along the POST request
+	 *  \param[in] callback Function called upon receiving response
+	 *             returned by the server
+	 *  \param[in] user_data Pointer to user data that will be
+	 *             passed as a parameter to the callback function
+	 *  \param[in] ssl SSL configuration to use when targeting
+	 *             https urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*post_async) (const char *url,
+				artik_http_headers * headers,
+				const char *body,
+				artik_http_response_callback callback,
+				void *user_data,
+				artik_ssl_config * ssl);
 	/*!
 	 *  \brief Perform a PUT request
 	 *
@@ -200,6 +281,29 @@ typedef struct {
 			   const char *body, char **response,
 			   int *status, artik_ssl_config * ssl);
 	/*!
+	 *  \brief Perform a PUT request asynchronously
+	 *
+	 *  \param[in] url URL to request
+	 *  \param[in] headers Pointer to the structure object
+	 *             containing the HTTP headers to send
+	 *  \param[in] body String containing the body data to
+	 *             send along the PUT request
+	 *  \param[in] callback Function called upon receiving response
+	 *             returned by the server
+	 *  \param[in] user_data Pointer to user data that will be
+	 *             passed as a parameter to the callback function
+	 *  \param[in] ssl SSL configuration to use when targeting
+	 *             https urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*put_async) (const char *url,
+				artik_http_headers * headers,
+				const char *body,
+				artik_http_response_callback callback,
+				void *user_data,
+				artik_ssl_config * ssl);
+	/*!
 	 *  \brief Perform a DELETE request
 	 *
 	 *  \param[in] url URL to request
@@ -222,6 +326,26 @@ typedef struct {
 			   artik_http_headers * headers,
 			   char **response, int *status,
 			   artik_ssl_config * ssl);
+	/*!
+	 *  \brief Perform a DELETE request asynchronously
+	 *
+	 *  \param[in] url URL to request
+	 *  \param[in] headers Pointer to the structure object
+	 *             containing the HTTP headers to send
+	 *  \param[in] callback Function called upon receiving response
+	 *             returned by the server
+	 *  \param[in] user_data Pointer to user data that will be
+	 *             passed as a parameter to the callback function
+	 *  \param[in] ssl SSL configuration to use when targeting
+	 *             https urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*del_async) (const char *url,
+				artik_http_headers * headers,
+				artik_http_response_callback callback,
+				void *user_data,
+				artik_ssl_config * ssl);
 
 } artik_http_module;
 
