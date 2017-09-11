@@ -23,6 +23,7 @@ artik::Adc::Adc(unsigned int pin, char *name) {
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_adc_module*>(
       artik_request_api_module("adc"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
   this->m_config.pin_num = pin;
   if (name)
     this->m_config.name = strndup(name, MAX_NAME_LEN);
@@ -32,6 +33,7 @@ artik::Adc::Adc(artik_adc_config &config) {
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_adc_module*>(
       artik_request_api_module("adc"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
   this->m_config.pin_num = config.pin_num;
   if (config.name)
     this->m_config.name = strndup(config.name, MAX_NAME_LEN);
@@ -40,6 +42,7 @@ artik::Adc::Adc(artik_adc_config &config) {
 artik::Adc::Adc(artik::Adc const &val) {
   this->m_module = val.m_module;
   this->m_handle = val.m_handle;
+  memset(&this->m_config, 0, sizeof(this->m_config));
   this->m_config.pin_num = val.m_config.pin_num;
   if (val.m_config.name)
     this->m_config.name = strndup(val.m_config.name, MAX_NAME_LEN);
