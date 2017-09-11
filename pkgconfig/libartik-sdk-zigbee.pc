@@ -2,7 +2,7 @@ prefix=/usr
 exec_prefix=/usr
 libdir=/usr/lib
 includedir=/usr/include/artik/zigbee
-version=1.4
+version=1.5
 
 Name: ARTIK SDK Zigbee
 Description: SDK Zigbee Library for Samsung's ARTIK platforms

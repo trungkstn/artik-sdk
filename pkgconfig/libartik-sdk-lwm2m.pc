@@ -2,7 +2,7 @@ prefix=/usr
 exec_prefix=/usr
 libdir=/usr/lib
 includedir=/usr/include/artik/lwm2m
-version=1.4
+version=1.5
 
 Name: ARTIK SDK LWM2M
 Description: SDK LWM2M Library for Samsung's ARTIK platforms

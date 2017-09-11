@@ -2,7 +2,7 @@ prefix=/usr
 exec_prefix=/usr
 libdir=/usr/lib
 includedir=/usr/include/artik/connectivity
-version=1.4
+version=1.5
 
 Name: ARTIK SDK Connectivity
 Description: SDK Connectivity Library for Samsung's ARTIK platforms
