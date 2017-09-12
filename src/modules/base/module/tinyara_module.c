@@ -126,7 +126,7 @@ int os_get_platform(void)
 	 * be filled up.
 	 *
 	 */
-#ifdef CONFIG_ARCH_BOARD_ARTIK053
+#if defined(CONFIG_ARCH_BOARD_ARTIK053) || defined(CONFIG_ARCH_BOARD_ARTIK053S)
 	return ARTIK053;
 #else
 	return -1;
