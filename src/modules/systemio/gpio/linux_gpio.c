@@ -279,6 +279,9 @@ artik_error os_gpio_set_change_callback(artik_gpio_config *config,
 
 	log_dbg("");
 
+	if (!callback)
+		return E_BAD_ARGS;
+
 	/* Must be an input */
 	if (config->dir != GPIO_IN)
 		return E_BAD_ARGS;

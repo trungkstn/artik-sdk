@@ -22,6 +22,7 @@ artik::Gpio::Gpio(artik_gpio_id id, char* name, artik_gpio_dir_t dir,
     artik_gpio_edge_t edge, int initial_value) {
   m_module = reinterpret_cast<artik_gpio_module*>(
       artik_request_api_module("gpio"));
+  memset(&m_config, 0, sizeof(artik_gpio_config));
   m_config.id = id;
   if (name)
     m_config.name = strndup(name, MAX_NAME_LEN);
