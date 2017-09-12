@@ -24,6 +24,7 @@ artik::Pwm::Pwm(unsigned int pin, char *name, unsigned int period,
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_pwm_module*>(
       artik_request_api_module("pwm"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
   this->m_config.pin_num = pin;
   this->m_config.name = name ? strdup(name) : NULL;
   this->m_config.period = period;
@@ -35,6 +36,7 @@ artik::Pwm::Pwm(artik_pwm_config &config) {
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_pwm_module*>(
       artik_request_api_module("pwm"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
   memcpy(&this->m_config, &config, sizeof(this->m_config));
   if (config.name)
     this->m_config.name = strdup(config.name);
@@ -43,6 +45,7 @@ artik::Pwm::Pwm(artik_pwm_config &config) {
 artik::Pwm::Pwm(artik::Pwm const &val) {
   this->m_module = val.m_module;
   this->m_handle = val.m_handle;
+  memset(&this->m_config, 0, sizeof(this->m_config));
   memcpy(&this->m_config, &val.m_config, sizeof(this->m_config));
 }
 
@@ -50,6 +53,7 @@ artik::Pwm::Pwm() {
   this->m_handle = NULL;
   this->m_module = reinterpret_cast<artik_pwm_module*>(
       artik_request_api_module("pwm"));
+  memset(&this->m_config, 0, sizeof(this->m_config));
 }
 
 artik::Pwm::~Pwm() {
