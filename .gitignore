@@ -1,4 +1,5 @@
 *.o
+*.a
 build/
 build-armhf/
 build-arm64/
