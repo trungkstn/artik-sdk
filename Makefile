@@ -56,6 +56,7 @@ CFLAGS += -I$(ARTIK_SDK_DIR)/inc/sensor
 CFLAGS += -I$(ARTIK_SDK_DIR)/inc/wifi
 CFLAGS += -I$(ARTIK_SDK_DIR)/inc/connectivity
 CFLAGS += -I$(ARTIK_SDK_DIR)/inc/lwm2m
+CFLAGS += -I$(ARTIK_SDK_DIR)/inc/mqtt
 CFLAGS += -I$(TOPDIR)/../apps/include/netutils
 CFLAGS += -D__TINYARA__
 
@@ -93,6 +94,11 @@ CSRCS += $(ARTIK_SDK_DIR)/src/modules/connectivity/security/tinyara/mbedtls_pkcs
 
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/wifi/artik_wifi.c
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/wifi/tinyara/tinyara_wifi.c
+
+CFLAGS += -I$(TOPDIR)/../apps/netutils/mqtt/lib
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/mqtt/artik_mqtt.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/mqtt/os_mqtt.c
+CSRCS += $(ARTIK_SDK_DIR)/src/modules/mqtt/tinyara/mqtt_client.c
 
 CFLAGS += -I$(TOPDIR)/../external/wakaama-client/lwm2mclient
 CSRCS += $(ARTIK_SDK_DIR)/src/modules/lwm2m/artik_lwm2m.c
