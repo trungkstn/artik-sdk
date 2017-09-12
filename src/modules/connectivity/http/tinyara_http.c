@@ -766,3 +766,39 @@ static void _artik_http_callback(FAR struct http_client_response_t *response)
 	HTTP_API_NOTIFY();
 }
 #endif
+
+artik_error os_http_get_stream_async(const char *url,
+		artik_http_headers *headers, artik_http_stream_callback stream_callback,
+		artik_http_response_callback response_callback, void *user_data,
+		artik_ssl_config *ssl)
+{
+	return E_NOT_SUPPORTED;
+}
+
+artik_error os_http_get_async(const char *url, artik_http_headers *headers,
+		artik_http_response_callback callback, void *user_data,
+		artik_ssl_config *ssl)
+{
+	return E_NOT_SUPPORTED;
+}
+
+artik_error os_http_post_async(const char *url, artik_http_headers *headers,
+		const char *body, artik_http_response_callback callback,
+		void *user_data, artik_ssl_config *ssl)
+{
+	return E_NOT_SUPPORTED;
+}
+
+artik_error os_http_put_async(const char *url, artik_http_headers *headers,
+		const char *body, artik_http_response_callback callback,
+		void *user_data, artik_ssl_config *ssl)
+{
+	return E_NOT_SUPPORTED;
+}
+
+artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
+		artik_http_response_callback callback, void *user_data,
+		artik_ssl_config *ssl)
+{
+	return E_NOT_SUPPORTED;
+}
