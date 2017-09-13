@@ -81,9 +81,11 @@ artik_error os_wifi_init(artik_wifi_mode_t mode)
 	    mode != ARTIK_WIFI_MODE_AP)
 		return E_BAD_ARGS;
 
-	ret = wifi_initialize();
-	if (ret != WIFI_SUCCESS)
-		return E_WIFI_ERROR;
+	if (mode != ARTIK_WIFI_MODE_AP) {
+		ret = wifi_initialize();
+		if (ret != WIFI_SUCCESS)
+			return E_WIFI_ERROR;
+	}
 
 	wifi_initialized = true;
 
