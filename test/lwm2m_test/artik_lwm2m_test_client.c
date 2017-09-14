@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <linux/limits.h>
+#include <signal.h>
 
 #include <artik_module.h>
 #include <artik_platform.h>
@@ -163,6 +164,7 @@ static void on_error(void *data, void *user_data)
 	artik_error err = (artik_error)(intptr_t)data;
 
 	fprintf(stdout, "LWM2M error: %s\r\n", error_msg(err));
+	loop->quit();
 }
 
 static void on_execute_resource(void *data, void *user_data)
@@ -379,6 +381,11 @@ exit:
 	return ret;
 }
 
+static void sigint_handler(int dummy)
+{
+	loop->quit();
+}
+
 int main(UNUSED int argc, UNUSED char *argv[])
 {
 	int opt;
@@ -441,6 +448,7 @@ int main(UNUSED int argc, UNUSED char *argv[])
 
 	loop = (artik_loop_module *) artik_request_api_module("loop");
 	lwm2m = (artik_lwm2m_module *) artik_request_api_module("lwm2m");
+	signal(SIGINT, sigint_handler);
 
 	ret = test_lwm2m_default();
 
