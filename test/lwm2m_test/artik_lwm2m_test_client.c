@@ -244,16 +244,17 @@ static bool fill_buffer_from_file(const char *file, char **pbuffer)
 	}
 
 	rewind(stream);
-	buffer = malloc(size * sizeof(char));
+	buffer = malloc((size + 1)*sizeof(char));
 	if (!buffer) {
 		fprintf(stderr, "cannot allocate %ld bytes\n", size);
 		goto error;
 	}
-
 	fread(buffer, sizeof(char), size, stream);
 	fclose(stream);
 
+	buffer[size] = '\0';
 	*pbuffer = buffer;
+
 	return true;
 
 error:
