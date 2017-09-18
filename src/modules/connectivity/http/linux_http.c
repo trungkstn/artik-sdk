@@ -263,8 +263,18 @@ static int os_http_process_get_stream(void *user_data)
 
 	if (os_http_get_stream(interface->url, interface->headers,
 		&interface->status, interface->stream_cb_params.callback,
-		interface->stream_cb_params.user_data, interface->ssl)) {
+		interface->stream_cb_params.user_data, interface->ssl)
+								!= S_OK) {
 		log_err("os_http_process_get_stream");
+
+		if (interface->url)
+			free((void *)interface->url);
+
+		if (interface->headers)
+			free(interface->headers);
+
+		free(interface);
+
 		return 0;
 	}
 
@@ -272,6 +282,15 @@ static int os_http_process_get_stream(void *user_data)
 		interface->response_cb_params.callback(interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
+
+
+	if (interface->url)
+		free((void *)interface->url);
+
+	if (interface->headers)
+		free(interface->headers);
+
+	free(interface);
 
 	return 0;
 }
@@ -283,8 +302,18 @@ static int os_http_process_get(void *user_data)
 	log_dbg("");
 
 	if (os_http_get(interface->url, interface->headers,
-		&interface->response, &interface->status, interface->ssl)) {
+		&interface->response, &interface->status, interface->ssl)
+								!= S_OK) {
 		log_err("os_http_process_get");
+
+		if (interface->url)
+			free((void *)interface->url);
+
+		if (interface->headers)
+			free(interface->headers);
+
+		free(interface);
+
 		return 0;
 	}
 
@@ -292,6 +321,14 @@ static int os_http_process_get(void *user_data)
 		interface->response_cb_params.callback(interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
+
+	if (interface->url)
+		free((void *)interface->url);
+
+	if (interface->headers)
+		free(interface->headers);
+
+	free(interface);
 
 	return 0;
 }
@@ -303,8 +340,18 @@ static int os_http_process_post(void *user_data)
 	log_dbg("");
 
 	if (os_http_post(interface->url, interface->headers, interface->body,
-		&interface->response, &interface->status, interface->ssl)) {
+		&interface->response, &interface->status, interface->ssl)
+								!= S_OK) {
 		log_err("os_http_process_post");
+
+		if (interface->url)
+			free((void *)interface->url);
+
+		if (interface->headers)
+			free(interface->headers);
+
+		free(interface);
+
 		return 0;
 	}
 
@@ -312,6 +359,14 @@ static int os_http_process_post(void *user_data)
 		interface->response_cb_params.callback(interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
+
+	if (interface->url)
+		free((void *)interface->url);
+
+	if (interface->headers)
+		free(interface->headers);
+
+	free(interface);
 
 	return 0;
 }
@@ -323,8 +378,18 @@ static int os_http_process_put(void *user_data)
 	log_dbg("");
 
 	if (os_http_put(interface->url, interface->headers, interface->body,
-		&interface->response, &interface->status, interface->ssl)) {
+		&interface->response, &interface->status, interface->ssl)
+								!= S_OK) {
 		log_err("os_http_process_put");
+
+		if (interface->url)
+			free((void *)interface->url);
+
+		if (interface->headers)
+			free(interface->headers);
+
+		free(interface);
+
 		return 0;
 	}
 
@@ -332,6 +397,14 @@ static int os_http_process_put(void *user_data)
 		interface->response_cb_params.callback(interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
+
+	if (interface->url)
+		free((void *)interface->url);
+
+	if (interface->headers)
+		free(interface->headers);
+
+	free(interface);
 
 	return 0;
 }
@@ -343,8 +416,18 @@ static int os_http_process_delete(void *user_data)
 	log_dbg("");
 
 	if (os_http_delete(interface->url, interface->headers,
-		&interface->response, &interface->status, interface->ssl)) {
+		&interface->response, &interface->status, interface->ssl)
+								!= S_OK) {
 		log_err("os_http_process_delete");
+
+		if (interface->url)
+			free((void *)interface->url);
+
+		if (interface->headers)
+			free(interface->headers);
+
+		free(interface);
+
 		return 0;
 	}
 
@@ -352,6 +435,14 @@ static int os_http_process_delete(void *user_data)
 		interface->response_cb_params.callback(interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
+
+	if (interface->url)
+		free((void *)interface->url);
+
+	if (interface->headers)
+		free(interface->headers);
+
+	free(interface);
 
 	return 0;
 }
@@ -518,6 +609,11 @@ artik_error os_http_get_stream_async(const char *url,
 
 	log_dbg("");
 
+	if (!url) {
+		log_err("Bad arguments");
+		return E_BAD_ARGS;
+	}
+
 	interface = malloc(sizeof(os_http_interface));
 
 	if (interface == NULL) {
@@ -527,8 +623,11 @@ artik_error os_http_get_stream_async(const char *url,
 
 	memset(interface, 0, sizeof(os_http_interface));
 
-	interface->url = url;
-	interface->headers = headers;
+	interface->url = strdup(url);
+	if (headers) {
+		interface->headers = malloc(sizeof(artik_http_headers));
+		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+	}
 	interface->stream_cb_params.callback = stream_callback;
 	interface->stream_cb_params.user_data = user_data;
 	interface->response_cb_params.callback = response_callback;
@@ -699,6 +798,11 @@ artik_error os_http_get_async(const char *url, artik_http_headers *headers,
 
 	log_dbg("");
 
+	if (!url) {
+		log_err("Bad arguments");
+		return E_BAD_ARGS;
+	}
+
 	interface = malloc(sizeof(os_http_interface));
 
 	if (interface == NULL) {
@@ -708,8 +812,11 @@ artik_error os_http_get_async(const char *url, artik_http_headers *headers,
 
 	memset(interface, 0, sizeof(os_http_interface));
 
-	interface->url = url;
-	interface->headers = headers;
+	interface->url = strdup(url);
+	if (headers) {
+		interface->headers = malloc(sizeof(artik_http_headers));
+		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+	}
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
 	interface->ssl = ssl;
@@ -886,6 +993,11 @@ artik_error os_http_post_async(const char *url, artik_http_headers *headers,
 
 	log_dbg("");
 
+	if (!url) {
+		log_err("Bad arguments");
+		return E_BAD_ARGS;
+	}
+
 	interface = malloc(sizeof(os_http_interface));
 
 	if (interface == NULL) {
@@ -895,8 +1007,11 @@ artik_error os_http_post_async(const char *url, artik_http_headers *headers,
 
 	memset(interface, 0, sizeof(os_http_interface));
 
-	interface->url = url;
-	interface->headers = headers;
+	interface->url = strdup(url);
+	if (headers) {
+		interface->headers = malloc(sizeof(artik_http_headers));
+		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+	}
 	interface->body = body;
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
@@ -1070,6 +1185,11 @@ artik_error os_http_put_async(const char *url, artik_http_headers *headers,
 
 	log_dbg("");
 
+	if (!url) {
+		log_err("Bad arguments");
+		return E_BAD_ARGS;
+	}
+
 	interface = malloc(sizeof(os_http_interface));
 
 	if (interface == NULL) {
@@ -1079,8 +1199,11 @@ artik_error os_http_put_async(const char *url, artik_http_headers *headers,
 
 	memset(interface, 0, sizeof(os_http_interface));
 
-	interface->url = url;
-	interface->headers = headers;
+	interface->url = strdup(url);
+	if (headers) {
+		interface->headers = malloc(sizeof(artik_http_headers));
+		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+	}
 	interface->body = body;
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
@@ -1251,6 +1374,11 @@ artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
 
 	log_dbg("");
 
+	if (!url) {
+		log_err("Bad arguments");
+		return E_BAD_ARGS;
+	}
+
 	interface = malloc(sizeof(os_http_interface));
 
 	if (interface == NULL) {
@@ -1260,8 +1388,11 @@ artik_error os_http_delete_async(const char *url, artik_http_headers *headers,
 
 	memset(interface, 0, sizeof(os_http_interface));
 
-	interface->url = url;
-	interface->headers = headers;
+	interface->url = strdup(url);
+	if (headers) {
+		interface->headers = malloc(sizeof(artik_http_headers));
+		memcpy(interface->headers, headers, sizeof(artik_http_headers));
+	}
 	interface->response_cb_params.callback = callback;
 	interface->response_cb_params.user_data = user_data;
 	interface->ssl = ssl;
