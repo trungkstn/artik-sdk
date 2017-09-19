@@ -1,23 +1,30 @@
 /*! \page usage ARTIK SDK usage
  *
- * \section usage_linux Fedora 24
+ * \section install Installation
  *
- * \subsection install Installation
+ * \subsection check_install Checking for SDK installation
  *
- * \subsubsection check_install Checking for SDK installation
+ * Most ARTIK boards should come with the ARTIK SDK preinstalled. To verify
+ * if it is the case on a specific board, type the following command on
+ * the target:
  *
- * Most ARTIK boards should come with the ARTIK SDK preinstalled. To verify if it is the case
- * on a specific board, type the following command on the target:
- *
+ * \b Fedora
 \verbatim
 $ dnf info libartik-sdk-base
 \endverbatim
  *
- * If no package is listed then the ARTIK board is missing the repository configuration. Follow
- * the instructions below to configure the ARTIK RPM repository. Otherwise you can directly jump
- * to the \ref update_sdk section.
+ * \b Ubuntu
+\verbatim
+$ apt show libartik-sdk-base
+\endverbatim
  *
- * \subsubsection repo_config Configuring the ARTIK package repository
+ * If no package is listed then the ARTIK board is missing the repository
+ * configuration. Follow the instructions below to configure the ARTIK package
+ * repository. Otherwise you can directly jump to the \ref update_sdk section.
+ *
+ * \subsection repo_config Configuring the ARTIK package repository
+ *
+ * \b Fedora
  *
  * Create a new <b>/etc/yum.repos.d/artik.repo</b> file and copy the
  * following content into it.
@@ -33,8 +40,8 @@ gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-artik
  \endverbatim
  *
- * Create a new <b>/etc/pki/rpm-gpg/RPM-GPG-KEY-artik</b> file and copy the content
- * of this public key into it.
+ * Create a new <b>/etc/pki/rpm-gpg/RPM-GPG-KEY-artik</b> file and copy the
+ * content of this public key into it.
  *
  \verbatim
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -65,7 +72,31 @@ Nb0z4J5LYa1ci8t3mEXnzMQMqlqUFOCfve5p
 $ dnf makecache --refresh
 \endverbatim
  *
- * \subsubsection install_sdk Installing the SDK libraries
+ * \b Ubuntu
+ * 
+ * Add the package repository to Ubuntu's repository list as follows:
+\verbatim
+$ echo "deb http://repo.artik.cloud/artik/bin/pub/artik/ubuntu xenial main" > /etc/apt/sources.list.d/artik-e2e-sources.list
+\endverbatim
+ *
+ * Download and install the associated public key for verifying signatures
+ * of downloaded packages.
+ *
+\verbatim
+$ apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 55955AEB
+gpg: requesting key 55955AEB from hkp server keyserver.ubuntu.com
+gpg: key 55955AEB: public key "ARTIK Ubuntu Package Repository (Samsung ARTIK) <artie@artik.io>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1  (RSA: 1)
+\endverbatim
+ *
+ * Update the package index of the board to take the new packages into account.
+ *
+\verbatim
+$ apt-get install libartik-sdk
+\endverbatim
+ *
+ * \subsection install_sdk Installing the SDK libraries
  *
  * The SDK modules are separated in different modules that can be installed
  * independently. This gives the following list of packages that can be
@@ -87,75 +118,136 @@ $ dnf makecache --refresh
  * <b>Note</b>: some of the packages above have some dependencies with other packages, which
  * are handled automatically by the package system.
  *
- * To install a specific package, simply use the <b>dnf</b> command as follows:
+ * To install a specific package, simply use the following command:
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk-systemio
 \endverbatim
  *
- * <b>Note</b>: in this example, the <b>libartik-sdk-base</b> package will be installed as well, as it
- * is a dependency of <b>libartik-sdk-systemio</b>.
+ * \b Ubuntu
  *
- * To install all the modules packages, you can install the following meta package:
+\verbatim
+$ apt install libartik-sdk-systemio
+\endverbatim
+ *
+ * <b>Note</b>: in this example, the <b>libartik-sdk-base</b> package will be
+ * installed as well, as it is a dependency of <b>libartik-sdk-systemio</b>.
+ *
+ * To install all the modules packages, you can install the following meta
+ * package:
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk
 \endverbatim
  *
- * \subsubsection install_tests Installing the test programs
+ * \b Ubuntu
  *
- * The <b>libartik-sdk-tests</b> package contains test programs to try out the SDK libraries. It can
- * be installed using:
+\verbatim
+$ apt install libartik-sdk
+\endverbatim
+ *
+ * \subsection install_tests Installing the test programs
+ *
+ * The <b>libartik-sdk-tests</b> package contains test programs to try out the
+ * SDK libraries. It can be installed using:
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk-tests
 \endverbatim
  *
- * <b>Note</b>: as the <b>libartik-sdk-tests</b> package contains tests for all SDK libraries, <b>dnf</b>
- * will proceed to the installation of all the SDK packages when installing <b>libartik-sdk-tests</b>.
+ * \b Ubuntu
  *
- * \subsubsection update_sdk Update
+\verbatim
+$ apt install libartik-sdk-tests
+\endverbatim
  *
- * If the ARTIK SDK is installed and you want to update it to the latest released version, use the
- * <b>dnf update</b> command. You can also update specific packages only as shown in the example
- * below.
+ * <b>Note</b>: as the <b>libartik-sdk-tests</b> package contains tests for all
+ * SDK libraries, the package manager will proceed to the installation of all
+ * the SDK packages when installing <b>libartik-sdk-tests</b>.
+ *
+ * \subsection update_sdk Update
+ *
+ * If the ARTIK SDK is installed and you want to update it to the latest
+ * released version, use the update command. You can also update specific
+ * packages only as shown in the example below.
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf update libartik-sdk-base libartik-sdk-systemio
 \endverbatim
  *
+ * \b Ubuntu
  *
- * \subsection link Linking programs against the ARTIK SDK
+\verbatim
+$ apt upgrade libartik-sdk-base libartik-sdk-systemio
+\endverbatim
  *
- * \subsubsection dev_packages Installing the development packages
+ * \section link Linking programs against the ARTIK SDK
  *
- * Before using the SDK, you need to install the development packages related to the SDK
- * libraries you want to use from your programs. Specific development packages including required
- * header files are availabe for installation, named as follows:
+ * \subsection dev_packages Installing the development packages
+ *
+ * Before using the SDK, you need to install the development packages related
+ * to the SDK libraries you want to use from your programs. Specific development
+ * packages including required header files are availabe for installation, named
+ * as follows:
+ *
+ * \b Fedora
+ *
 \verbatim
 $ dnf install libartik-sdk-<name>-devel
 \endverbatim
  *
- * If you want to install the development packages of all the modules at once, install the following
- * meta package:
+ * \b Ubuntu
+ *
+\verbatim
+$ dnf install libartik-sdk-<name>-dev
+\endverbatim
+ *
+ * If you want to install the development packages of all the modules at once,
+ * install the following meta package:
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk-devel
 \endverbatim
  *
- * You need to install these packages before being able to include the header files describing
- * the APIs you can call for each library. For instance if you want to use the ARTIK Cloud features
- * from the associated <b>connectivity</b> library, you should install the development package below:
+ * \b Ubuntu
+ *
+\verbatim
+$ apt install libartik-sdk-dev
+\endverbatim
+ *
+ * You need to install these packages before being able to include the header
+ * files describing the APIs you can call for each library. For instance if you
+ * want to use the ARTIK Cloud features from the associated <b>connectivity</b>
+ * library, you should install the development package below:
+ *
+ * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk-connectivity-devel
 \endverbatim
  *
- * \subsubsection lib_naming Shared libraries naming
+ * \b Ubuntu
  *
- * The ARTIK SDK is made of shared libraries that any program can link against to call the APIs
- * exposed by each module. After installation, these libraries can be found on the board under
- * <b>/usr/lib/</b>, each library being named following this scheme:
+\verbatim
+$ apt install libartik-sdk-connectivity-dev
+\endverbatim
+ *
+ * \subsection lib_naming Shared libraries naming
+ *
+ * The ARTIK SDK is made of shared libraries that any program can link against
+ * to call the APIs exposed by each module. After installation, these libraries
+ * can be found on the board under <b>/usr/lib/</b>, each library being named
+ * following this scheme:
  *
  \verbatim
  libartik-sdk-<name>.so.X.Y.Z
@@ -167,8 +259,8 @@ $ dnf install libartik-sdk-connectivity-devel
  * - <b>Y</b> is the minor version number of the library
  * - <b>Z</b> is the patch version number of the library
  *
- * Note that during installation, additional symbolic links are created for programs to link to
- * specific library versions in an easier way:
+ * Note that during installation, additional symbolic links are created for
+ * programs to link to specific library versions in an easier way:
  *
   \verbatim
 /usr/lib/libartik-sdk-<name>.so -> libartik-sdk-<name>.so.X
@@ -176,32 +268,33 @@ $ dnf install libartik-sdk-connectivity-devel
 /usr/lib/libartik-sdk-<name>.so.X.Y.Z
  \endverbatim
  *
- * \subsubsection headers Header files
+ * \subsection headers Header files
  *
- * In order for a program to use the ARTIK SDK APIs, it needs to include header files that
- * are located under <b>/usr/include/artik</b>. Each SDK library has its own subdirectory
- * containing its own headers under <b>/usr/include/artik/<name></b>.
+ * In order for a program to use the ARTIK SDK APIs, it needs to include header
+ * files that are located under <b>/usr/include/artik</b>. Each SDK library has
+ * its own subdirectory containing its own headers under
+ * <b>/usr/include/artik/<name></b>.
  *
- * If you are developing a C++ program and want to use the C++ APIs of the SDK, you
- * need to include specific C++ headers, located for each SDK library under
+ * If you are developing a C++ program and want to use the C++ APIs of the SDK,
+ * you need to include specific C++ headers, located for each SDK library under
  * <b>/usr/include/artik/<name>/cpp</b>.
  *
- * \subsubsection generate_flags Compilation flags
+ * \subsection generate_flags Compilation flags
  *
- * For a program to use the SDK libraries, it needs to specify proper compilation
- * flags for the compiler to find the header files and libraries under appropriate
- * locations. When using the <b>gcc</b> compiler, this is usually done by adding
- * the following parameters to the command-line.
+ * For a program to use the SDK libraries, it needs to specify proper
+ * compilation flags for the compiler to find the header files and libraries
+ * under appropriate locations. When using the <b>gcc</b> compiler, this is
+ * usually done by adding the following parameters to the command-line.
  *
- *  - <b>-I<path></b> specifies under which path the compiler should look for included
- *       header files.
- *  - <b>-l<libname></b> tells the compiler to link to the <b>lib<libname>.so</b>
- *       shared library.
- *  - <b>-L<path></b> specifies under which path the linker should look for shared
- *       libraries to link.
+ *  - <b>-I<path></b> specifies under which path the compiler should look for
+ *       included header files.
+ *  - <b>-l<libname></b> tells the compiler to link to the
+ *       <b>lib<libname>.so</b> shared library.
+ *  - <b>-L<path></b> specifies under which path the linker should look for
+ *       shared libraries.
  *
- * Therefore for compiling a program against the <b>base</b> and <b>connectivity</b>
- * libraries, one must call the following command:
+ * Therefore for compiling a program against the <b>base</b> and
+ * <b>connectivity</b> libraries, one must call the following command:
  *
 \verbatim
 $ gcc <source file>.c -o <executable name> -I/usr/include/artik/base -I/usr/include/artik/connectivity -lartik-sdk-base
@@ -214,25 +307,27 @@ $ gcc <source file>.c -o <executable name> -I/usr/include/artik/base -I/usr/incl
  * that adding other SDK libraries to link at build time is harmless and should
  * not break proper compilation.
  *
- * In order to ease up generation of proper command-line when building and handle
- * dynamic cases, it is recommended to use the <b>pkg-config</b> program to
- * automatically retrieve compilation flags from your build system. This program
- * parses <b>.pc</b> configuration files installed by the development packages
- * under <b>/usr/lib/pkgconfig</b>. When called on specific libraries, it will return
- * proper compilation flags expected for linking against the specified libraries.
+ * In order to ease up generation of proper command-line when building and
+ * handle dynamic cases, it is recommended to use the <b>pkg-config</b> program
+ * to automatically retrieve compilation flags from your build system. This
+ * program parses <b>.pc</b> configuration files installed by the development
+ * packages under <b>/usr/lib/pkgconfig</b>. When called on specific libraries,
+ * it will return proper compilation flags expected for linking against the
+ * specified libraries.
  *
  * Therefore the example command-line above can be replaced by:
 \verbatim
 gcc <source file>.c -o <executable name> `pkg-config --libs --cflags libartik-sdk-base libartik-sdk-connectivity`
 \endverbatim
  *
- * \subsubsection sample_makefile Sample Makefile
+ * \subsection sample_makefile Sample Makefile
  *
- * The following is an example of a simple <b>Makefile</b> which can be used to compile
- * the HTTP example program available from this repo: https://github.com/SamsungARTIK/artik-sdk-examples.
+ * The following is an example of a simple <b>Makefile</b> which can be used to
+ * compile the HTTP example program available from this repo:
+ * https://github.com/SamsungARTIK/artik-sdk-examples.
  *
- * It can be easily adapted to compile any other program by slightly modifying the
- * relevant parts.
+ * It can be easily adapted to compile any other program by slightly modifying
+ * the relevant parts.
  *
 \verbatim
 # Specify here the name to give to the resulting executable
@@ -263,68 +358,91 @@ clean:
 \endverbatim
  *
  *
- * \subsection cross_compile Cross compilation
+ * \section cross_compile Cross compilation
  *
- * When building large projects it is useful to be able to build programs on a development
- * machine using cross-compilation. Such process requires specific setup for providing the right
- * pieces required by the development machine to generate programs intended to run on another
- * target.
+ * When building large projects it is useful to be able to build programs on a
+ * development machine using cross-compilation. Such process requires specific
+ * setup for providing the right pieces required by the development machine to
+ * generate programs intended to run on another target.
  *
- * The development machine needs to get the following parts in order to compile a program for an
- * ARTIK board:
+ * The development machine needs to get the following parts in order to compile
+ * a program for an ARTIK board:
  *
- * - A <b>cross-compilation toolchain</b>: this toolchain contains all the tools, compilers, and linker
- *   the build machine needs to generate binary programs executable on the target. The toolchain
- *   must be chosen to run on the development machine operating system, and target the CPU architecture
+ * - A <b>cross-compilation toolchain</b>: this toolchain contains all the
+ *   tools, compilers, and linker the build machine needs to generate binary
+ *   programs executable on the target. The toolchain must be chosen to run on
+ *   the development machine operating system, and target the CPU architecture
  *   and operating system of the ARTIK board.
  *
- * - A <b>sysroot</b>: this is an image of the rootfs used by the target at runtime. It contains all
- *   the shared libraries, header files, configuration files used by the target. The development
- *   machine needs to have access to these files in order to include the headers corresponding to the libraries
- *   and their specific versions used by the target. The sysroot can be generated using several ways:
- *     -# Have the system builder generate it when building the system image to be deployed on the target
- *     -# Remotely mounting the root filesystem of the target on the development machine
- *     -# Extracted from the root filesystem by directly copying files from the root filesystem of the target
- *        to the development machine
+ * - A <b>sysroot</b>: this is an image of the rootfs used by the target at
+ *   runtime. It contains all the shared libraries, header files, configuration
+ *   files used by the target. The development machine needs to have access to
+ *   these files in order to include the headers corresponding to the libraries
+ *   and their specific versions used by the target. The sysroot can be
+ *   generated using several ways:
+ *     -# Have the system builder generate it when building the system image to
+ *        be deployed on the target
+ *     -# Remotely mounting the root filesystem of the target on the development
+ *        machine
+ *     -# Extracted from the root filesystem by directly copying files from the
+ *        root filesystem of the target to the development machine
  *
- * Finally the build system of the program to cross-compile must be configured to use proper toolchain
- * and sysroot, and avoid using native tools and libraries which are very different from the ones actually
- * used for the target.
+ * Finally the build system of the program to cross-compile must be configured
+ * to use proper toolchain and sysroot, and avoid using native tools and
+ * libraries which are very different from the ones actually used for the
+ * target.
  *
- * \subsubsection cross_toolchain Getting a cross-compilation toolchain for ARTIK boards
+ * \subsection cross_toolchain Getting a cross-compilation toolchain for ARTIK boards
  *
- * Cross-compilation toolchains contain open-source tools such as <b>GNU gcc</b> or <b>GNU binutils</b> which
- * can be freely downloaded and compiled to form the final toolchain. While this process might be the best way
- * to get a truly optimized toolchain for one specific architecture, it is a very tedious process requiring a
- * deep understanding and knowledge of the compilation concepts. This is why we generally rely on prebuilt
- * toolchains as made available by <a href="http://www.linaro.org">Linaro</a>.
+ * Cross-compilation toolchains contain open-source tools such as <b>GNU gcc</b>
+ * or <b>GNU binutils</b> which can be freely downloaded and compiled to form
+ * the final toolchain. While this process might be the best way to get a truly
+ * optimized toolchain for one specific architecture, it is a very tedious
+ * process requiring a deep understanding and knowledge of the compilation
+ * concepts. This is why we generally rely on prebuilt toolchains as made
+ * available by <a href="http://www.linaro.org">Linaro</a>.
  *
- * Since ARTIK boards are based on the common armv7 and armv8 instruction sets, a lot of prebuilt toolchains
- * exist to match the ARTIK boards architectures. As a safe choice, you can use the
- * <b>gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabihf</b> toolchain from <b>Linaro</b> which has been tested
- * to work reliably for ARTIK boards. Installation steps on a Linux machine follow:
+ * Since ARTIK boards are based on the common armv7 and armv8 instruction sets,
+ * a lot of prebuilt toolchains exist to match the ARTIK boards architectures.
+ * As a safe choice, you can use the one of the binary toolchains provided by
+ * <b>Linaro</b> which has been tested to work reliably for ARTIK boards.
+ * Installation steps on a Linux machine follow:
+ *
+ * <b>Fedora / Ubuntu 32-bit</b>
  *
 \verbatim
-$ wget https://releases.linaro.org/components/toolchain/binaries/latest-5/arm-linux-gnueabihf/gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabihf.tar.xz
+$ wget https://releases.linaro.org/components/toolchain/binaries/latest-6/arm-linux-gnueabihf/gcc-linaro-6.4.1-2017.08-x86_64_arm-linux-gnueabihf.tar.xz
 $ sudo mkdir -p /opt/toolchains
-$ sudo tar xvf gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabihf.tar.xz -C /opt/toolchains
+$ sudo tar xvf gcc-linaro-6.4.1-2017.08-x86_64_arm-linux-gnueabihf.tar.xz -C /opt/toolchains
+\endverbatim
+ * 
+ * <b>Ubuntu 64-bit</b>
+ *
+\verbatim
+$ wget https://releases.linaro.org/components/toolchain/binaries/latest-6/aarch64-linux-gnu/gcc-linaro-6.4.1-2017.08-x86_64_aarch64-linux-gnu.tar.xz
+$ sudo mkdir -p /opt/toolchains
+$ sudo tar xvf gcc-linaro-6.4.1-2017.08-x86_64_aarch64-linux-gnu.tar.xz -C /opt/toolchains
 \endverbatim
  *
- * \subsubsection mount_sysroot Use a remotely mounted sysroot
+ * \subsection mount_sysroot Use a remotely mounted sysroot
  *
- * The easiest way for the development machine to get access to the target sysroot is to remotely mount the
- * root filesystem of the target on the development machine. This solution has the advantage of not requiring
- * any synchronization between the sysroot on the development machine and the root filesystem of the target. If
- * your program requires the installation of a new library, installing it on the target board will automatically
- * make this library available for linking on the development machine. On the other hand, this solution requires the
- * target to be connected to the development machine at all times when cross-compiling a program.
+ * The easiest way for the development machine to get access to the target
+ * sysroot is to remotely mount the root filesystem of the target on the
+ * development machine. This solution has the advantage of not requiring any
+ * synchronization between the sysroot on the development machine and the root
+ * filesystem of the target. If your program requires the installation of a new
+ * library, installing it on the target board will automatically make this
+ * library available for linking on the development machine. On the other hand,
+ * this solution requires the target to be connected to the development machine
+ * at all times when cross-compiling a program.
  *
- * One of the easiest ways to remotely mount a folder in Linux is using <b>sshfs</b>. ARTIK boards are shipped with
- * a SSH server running for development purposes, therefore there is no further configuration step to perform
- * to be able to remotely mount a directory on the target.
+ * One of the easiest ways to remotely mount a folder in Linux is using
+ * <b>sshfs</b>. ARTIK boards are shipped with a SSH server running for
+ * development purposes, therefore there is no further configuration step to
+ * perform to be able to remotely mount a directory on the target.
  *
- * The following example shows how to mount a remote filesystem using <b>sshfs</b> on an Ubuntu development
- * machine:
+ * The following example shows how to mount a remote filesystem using
+ * <b>sshfs</b> on an Ubuntu development machine:
  *
 \verbatim
 $ sudo mkdir -p /opt/sysroots/artik-sysroot
@@ -332,27 +450,34 @@ $ sudo apt-get install sshfs
 $ sudo sshfs -o allow_other,follow_symlinks root@[ip address of the target]:/ /opt/sysroots/artik-sysroot
 \endverbatim
  *
- * Just replace <b>[ip address of the target]</b> by the actual IP address exposed by the ARTIK board on the
- * network. After this, the full content of the target's filesystem should be visible from <b>/opt/sysroots/artik-sysroot</b>.
+ * Just replace <b>[ip address of the target]</b> by the actual IP address
+ * exposed by the ARTIK board on the network. After this, the full content of
+ * the target's filesystem should be visible from
+ * <b>/opt/sysroots/artik-sysroot</b>.
  *
- * \subsubsection sample_cross_makefile Sample cross-compilation Makefile
+ * \subsection sample_cross_makefile Sample cross-compilation Makefile
  *
- * Once the toolchain and the sysroot are properly setup on the development machine, the build system needs to be
- * modified to take these elements into account. Here are a few guidelines on what needs to be done for
- * the cross-compilation to be properly configured:
+ * Once the toolchain and the sysroot are properly setup on the development
+ * machine, the build system needs to be modified to take these elements into
+ * account. Here are a few guidelines on what needs to be done for the
+ * cross-compilation to be properly configured:
  *
- * - The way the compiler tools are currently called needs to be modified to call the cross-compilation tools instead of
- *   the native ones. This usually comes down to prepending a prefix (e.g. arm-linux-gnueabihf-) to the usual
+ * - The way the compiler tools are currently called needs to be modified to
+ *   call the cross-compilation tools instead of the native ones. This usually
+ *   comes down to prepending a prefix (e.g. arm-linux-gnueabihf-) to the usual
  *   <b>gcc</b>, <b>g++</b>, <b>ar</b>, <b>ld</b>, etc...
  *
- * - <b>pkg-config</b> needs to be configured to fetch the library information form the sysroot instead of
- *   the machine's own filesystem. This can be done by setting the <b>PKG_CONFIG_PATH</b> and <b>PKG_CONFIG_SYSROOT_DIR</b>
+ * - <b>pkg-config</b> needs to be configured to fetch the library information
+ *   from the sysroot instead of the machine's own filesystem. This can be done
+ *   by setting the <b>PKG_CONFIG_PATH</b> and <b>PKG_CONFIG_SYSROOT_DIR</b>
  *   environment variables.
  *
- * - Pass the <b>- -sysroot</b> parameter to the linker, pointing to the sysroot. It tells the linker to not use
- *   the native base libraries, but the ones from the target instead.
+ * - Pass the <b>- -sysroot</b> parameter to the linker, pointing to the sysroot.
+ *   It tells the linker to not use the native base libraries, but the ones from
+ *   the target instead.
  *
- * Here is a sample Makefile that allows cross-compiling the HTTP test program from https://github.com/SamsungARTIK/artik-sdk-examples.
+ * Here is a sample Makefile that allows cross-compiling the HTTP test program
+ * from https://github.com/SamsungARTIK/artik-sdk-examples.
  *
 \verbatim
 # Specify here the name to give to the resulting executable
@@ -389,15 +514,18 @@ clean:
 	rm -f *.o $(EXE_NAME)
 \endverbatim
  *
- * In order to cross-compile the example with this Makefile, a few environment variables need to be set
- * to specify the sysroot and the toolchain.
- * - <b>PATH</b>: prepend the path leading to the chosen toolchain libraries. It is usually located under the
- *   <b>bin</b> directory of the unpacked toolchain.
- * - <b>CROSS_COMPILE</b>: set it to the prefix of the chosen toolchain (e.g. arm-linux-gnueabihf-). This string
- *   will be prepended to the tools name, therefore do not forget to add the dash at the end.
+ * In order to cross-compile the example with this Makefile, a few environment
+ * variables need to be set to specify the sysroot and the toolchain.
+ * - <b>PATH</b>: prepend the path leading to the chosen toolchain libraries.
+ *   It is usually located under the <b>bin</b> directory of the unpacked
+ *   toolchain.
+ * - <b>CROSS_COMPILE</b>: set it to the prefix of the chosen toolchain
+ *   (e.g. arm-linux-gnueabihf-). This string will be prepended to the tools
+ *   name, therefore do not forget to add the dash at the end.
  * - <b>SYSROOT</b>: set it to the path of the sysroot.
  *
- * Based on the elements set above, the HTTP test program can be cross-compiled using the following commands.
+ * Based on the elements set above, the HTTP test program can be cross-compiled
+ * using the following commands.
  *
 \verbatim
 $ export PATH=/opt/toolchains/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf/bin:$PATH
