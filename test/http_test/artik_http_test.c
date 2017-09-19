@@ -68,13 +68,18 @@ int download_image(char *data, unsigned int len, void *user_data)
 	return written;
 }
 
-void http_response_callback(int status, char *response, void *user_data)
+void http_response_callback(artik_error ret, int status, char *response,
+							void *user_data)
 {
-
-	fprintf(stdout, "response = %s\nstatus = %d\n", response, status);
+	if (ret != S_OK)
+		fprintf(stderr, "error = %s\n", error_msg(ret));
+	else
+		fprintf(stdout, "response = %s\nstatus = %d\n", response,
+								status);
 }
 
-void http_stream_response_callback(int status, char *response, void *user_data)
+void http_stream_response_callback(artik_error ret, int status, char *response,
+								void *user_data)
 {
 	FILE *fp = (FILE *)user_data;
 	char outfilename[FILENAME_MAX] = "./image.jpeg";
@@ -85,6 +90,11 @@ void http_stream_response_callback(int status, char *response, void *user_data)
 	unsigned char data[1024];
 	char file_MD5[32];
 	char *target = file_MD5;
+
+	if (ret != S_OK) {
+		fprintf(stderr, "error = %s\n", error_msg(ret));
+		return;
+	}
 
 	fprintf(stdout, "stream done - status = %d\n", status);
 

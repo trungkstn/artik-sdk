@@ -258,28 +258,20 @@ static size_t stream_callback(void *ptr, size_t size, size_t nmemb,
 static int os_http_process_get_stream(void *user_data)
 {
 	os_http_interface *interface = (os_http_interface *)user_data;
+	artik_error ret;
+
+	ret = os_http_get_stream(interface->url, interface->headers,
+		&interface->status, interface->stream_cb_params.callback,
+		interface->stream_cb_params.user_data, interface->ssl);
 
 	log_dbg("");
 
-	if (os_http_get_stream(interface->url, interface->headers,
-		&interface->status, interface->stream_cb_params.callback,
-		interface->stream_cb_params.user_data, interface->ssl)
-								!= S_OK) {
+	if (ret != S_OK)
 		log_err("os_http_process_get_stream");
 
-		if (interface->url)
-			free((void *)interface->url);
-
-		if (interface->headers)
-			free(interface->headers);
-
-		free(interface);
-
-		return 0;
-	}
-
 	if (interface->response_cb_params.callback)
-		interface->response_cb_params.callback(interface->status,
+		interface->response_cb_params.callback(ret,
+			interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
 
@@ -298,27 +290,19 @@ static int os_http_process_get_stream(void *user_data)
 static int os_http_process_get(void *user_data)
 {
 	os_http_interface *interface = (os_http_interface *)user_data;
+	artik_error ret;
 
 	log_dbg("");
 
-	if (os_http_get(interface->url, interface->headers,
-		&interface->response, &interface->status, interface->ssl)
-								!= S_OK) {
+	ret = os_http_get(interface->url, interface->headers,
+		&interface->response, &interface->status, interface->ssl);
+
+	if (ret != S_OK)
 		log_err("os_http_process_get");
 
-		if (interface->url)
-			free((void *)interface->url);
-
-		if (interface->headers)
-			free(interface->headers);
-
-		free(interface);
-
-		return 0;
-	}
-
 	if (interface->response_cb_params.callback)
-		interface->response_cb_params.callback(interface->status,
+		interface->response_cb_params.callback(ret,
+			interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
 
@@ -336,27 +320,19 @@ static int os_http_process_get(void *user_data)
 static int os_http_process_post(void *user_data)
 {
 	os_http_interface *interface = (os_http_interface *)user_data;
+	artik_error ret;
 
 	log_dbg("");
 
-	if (os_http_post(interface->url, interface->headers, interface->body,
-		&interface->response, &interface->status, interface->ssl)
-								!= S_OK) {
+	ret = os_http_post(interface->url, interface->headers, interface->body,
+		&interface->response, &interface->status, interface->ssl);
+
+	if (ret != S_OK)
 		log_err("os_http_process_post");
 
-		if (interface->url)
-			free((void *)interface->url);
-
-		if (interface->headers)
-			free(interface->headers);
-
-		free(interface);
-
-		return 0;
-	}
-
 	if (interface->response_cb_params.callback)
-		interface->response_cb_params.callback(interface->status,
+		interface->response_cb_params.callback(ret,
+			interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
 
@@ -374,27 +350,19 @@ static int os_http_process_post(void *user_data)
 static int os_http_process_put(void *user_data)
 {
 	os_http_interface *interface = (os_http_interface *)user_data;
+	artik_error ret;
 
 	log_dbg("");
 
-	if (os_http_put(interface->url, interface->headers, interface->body,
-		&interface->response, &interface->status, interface->ssl)
-								!= S_OK) {
+	ret = os_http_put(interface->url, interface->headers, interface->body,
+		&interface->response, &interface->status, interface->ssl);
+
+	if (ret != S_OK)
 		log_err("os_http_process_put");
 
-		if (interface->url)
-			free((void *)interface->url);
-
-		if (interface->headers)
-			free(interface->headers);
-
-		free(interface);
-
-		return 0;
-	}
-
 	if (interface->response_cb_params.callback)
-		interface->response_cb_params.callback(interface->status,
+		interface->response_cb_params.callback(ret,
+			interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
 
@@ -412,27 +380,19 @@ static int os_http_process_put(void *user_data)
 static int os_http_process_delete(void *user_data)
 {
 	os_http_interface *interface = (os_http_interface *)user_data;
+	artik_error ret;
 
 	log_dbg("");
 
-	if (os_http_delete(interface->url, interface->headers,
-		&interface->response, &interface->status, interface->ssl)
-								!= S_OK) {
+	ret = os_http_delete(interface->url, interface->headers,
+		&interface->response, &interface->status, interface->ssl);
+
+	if (ret != S_OK)
 		log_err("os_http_process_delete");
 
-		if (interface->url)
-			free((void *)interface->url);
-
-		if (interface->headers)
-			free(interface->headers);
-
-		free(interface);
-
-		return 0;
-	}
-
 	if (interface->response_cb_params.callback)
-		interface->response_cb_params.callback(interface->status,
+		interface->response_cb_params.callback(ret,
+			interface->status,
 			interface->response,
 			interface->response_cb_params.user_data);
 

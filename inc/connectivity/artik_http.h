@@ -96,6 +96,8 @@ typedef int (*artik_http_stream_callback)(char *data,
 /*!
  *  \brief Response callback prototype
  *
+ *  \param[in] result Error returned by
+ *             the http process, S_OK on success, error code otherwise
  *  \param[in] status Status filled up by
  *	       the function with the server's response status
  *  \param[in] response String allocated and
@@ -104,8 +106,8 @@ typedef int (*artik_http_stream_callback)(char *data,
  *  \param[in] user_data The user data passed from the callback
  *             function
  */
-typedef void (*artik_http_response_callback)(int status, char *response,
-				void *user_data);
+typedef void (*artik_http_response_callback)(artik_error result, int status,
+				char *response, void *user_data);
 
 /*! \struct artik_http_module
  *
@@ -134,12 +136,12 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*get_stream) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*get_stream)(const char *url,
+				artik_http_headers *headers,
 				int *status,
 				artik_http_stream_callback callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a GET request on streaming data
 	 *         asynchronously
@@ -158,12 +160,12 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*get_stream_async) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*get_stream_async)(const char *url,
+				artik_http_headers *headers,
 				artik_http_stream_callback stream_callback,
 				artik_http_response_callback response_callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a GET request
 	 *
@@ -183,10 +185,10 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*get) (const char *url,
-			   artik_http_headers * headers,
+	artik_error (*get)(const char *url,
+			   artik_http_headers *headers,
 			   char **response, int *status,
-			   artik_ssl_config * ssl);
+			   artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a GET request asynchronously
 	 *
@@ -202,11 +204,11 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*get_async) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*get_async)(const char *url,
+				artik_http_headers *headers,
 				artik_http_response_callback callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a POST request
 	 *
@@ -228,10 +230,10 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*post) (const char *url,
-			    artik_http_headers * headers,
+	artik_error (*post)(const char *url,
+			    artik_http_headers *headers,
 			    const char *body, char **response,
-			    int *status, artik_ssl_config * ssl);
+			    int *status, artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a POST request asynchronously
 	 *
@@ -249,12 +251,12 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*post_async) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*post_async)(const char *url,
+				artik_http_headers *headers,
 				const char *body,
 				artik_http_response_callback callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a PUT request
 	 *
@@ -276,10 +278,10 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*put) (const char *url,
-			   artik_http_headers * headers,
+	artik_error (*put)(const char *url,
+			   artik_http_headers *headers,
 			   const char *body, char **response,
-			   int *status, artik_ssl_config * ssl);
+			   int *status, artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a PUT request asynchronously
 	 *
@@ -297,12 +299,12 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*put_async) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*put_async)(const char *url,
+				artik_http_headers *headers,
 				const char *body,
 				artik_http_response_callback callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a DELETE request
 	 *
@@ -322,10 +324,10 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*del) (const char *url,
-			   artik_http_headers * headers,
+	artik_error (*del)(const char *url,
+			   artik_http_headers *headers,
 			   char **response, int *status,
-			   artik_ssl_config * ssl);
+			   artik_ssl_config *ssl);
 	/*!
 	 *  \brief Perform a DELETE request asynchronously
 	 *
@@ -341,11 +343,11 @@ typedef struct {
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*del_async) (const char *url,
-				artik_http_headers * headers,
+	artik_error (*del_async)(const char *url,
+				artik_http_headers *headers,
 				artik_http_response_callback callback,
 				void *user_data,
-				artik_ssl_config * ssl);
+				artik_ssl_config *ssl);
 
 } artik_http_module;
 
