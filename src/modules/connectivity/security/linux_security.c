@@ -23,6 +23,8 @@
 #include <openssl/rand.h>
 #include <openssl/pkcs7.h>
 #include <openssl/x509v3.h>
+#define HEADER_CRYPTLIB_H
+#include <openssl/opensslconf.h>
 
 #include <artik_module.h>
 #include <artik_security.h>
@@ -191,6 +193,7 @@ static bool convert_asn1_time(ASN1_TYPE *in, artik_time *out)
 artik_error os_security_request(artik_security_handle *handle)
 {
 	ENGINE *engine = NULL;
+	char *load_dir = NULL;
 	security_node *node = (security_node *) artik_list_add(&requested_node,
 						0, sizeof(security_node));
 
@@ -200,8 +203,19 @@ artik_error os_security_request(artik_security_handle *handle)
 	*handle = (artik_security_handle)node;
 
 	/* First try to load and init the OpenSSL SE engine */
-	ENGINE_load_builtin_engines();
-	engine = ENGINE_by_id(ARTIK_SE_ENGINE_NAME);
+	ENGINE_load_dynamic();
+
+	load_dir = getenv("OPENSSL_ENGINES");
+	if (!load_dir)
+		load_dir = ENGINESDIR;
+
+	engine = ENGINE_by_id("dynamic");
+	ENGINE_ctrl_cmd_string(engine, "ID", ARTIK_SE_ENGINE_NAME, 0);
+	ENGINE_ctrl_cmd_string(engine, "DIR_LOAD", "2", 0);
+	ENGINE_ctrl_cmd_string(engine, "DIR_ADD", load_dir, 0);
+	ENGINE_ctrl_cmd_string(engine, "LIST_ADD", "1", 0);
+	ENGINE_ctrl_cmd_string(engine, "LOAD", NULL, 0);
+
 	if (!engine || !ENGINE_init(engine)) {
 		if (engine)
 			ENGINE_free(engine);
