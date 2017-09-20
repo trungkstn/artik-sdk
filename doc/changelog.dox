@@ -1,0 +1,95 @@
+/*! \page changelog API Changelog
+ *
+ * This page details the changes operated on the SDK API between consecutive
+ * releases.
+ *
+ * \section one_four_to_one_five Version 1.4 to 1.5
+ *
+ * \subsection one_four_to_one_five_http HTTP
+ *
+ * Added following functions:
+ * - \ref artik_http_module::get_stream_async
+ * - \ref artik_http_module::get_async
+ * - \ref artik_http_module::post_async
+ * - \ref artik_http_module::put_async
+ * - \ref artik_http_module::del_async
+ *
+ * They are asynchronous counterparts of the already existing HTTP functions.
+ * They take a \ref artik_http_response_callback argument pointing to the
+ * callback function to be called asynchronously after the operation is
+ * performed.
+ *
+ * \subsection one_four_to_one_five_lwm2m LWM2M
+ *
+ * Certificate mode has been added for connecting to a LWM2M server over
+ * UDP/DTLS or TCP/TLS. For that matter the \ref artik_lwm2m_config structure
+ * looses the \b tls_cert_path and \b tls_key_path fields, which are now
+ * replaced by a \ref artik_ssl_config field containing the requested SSL
+ * configuration.
+ *
+ * \subsection one_four_to_one_five_bt Bluetooth
+ *
+ * \subsubsection one_four_to_one_five_bt_general General
+ *
+ * \b xxxx_set_callback functions from all modules have been replaced by
+ * \ref artik_bluetooth_module::set_callbacks "set_callbacks" and
+ * \ref artik_bluetooth_module::set_callback "set_callback" functions.
+ * The first one takes an array of \ref artik_bt_callback_property structures
+ * containing information on callbacks to register. The second can be used
+ * to register a single callback. All calls to previous individual
+ * \b xxxx_set_callback functions must be replaced by
+ * \ref artik_bluetooth_module::set_callbacks "set_callbacks" or
+ * \ref artik_bluetooth_module::set_callback "set_callback".
+ *
+ * The following functions have been removed:
+ * - \b get_devices
+ * - \b get_paired_devices
+ * - \b get_connected_devices
+ *
+ * and replaced by \ref artik_bluetooth_module::get_devices and
+ * \ref artik_bluetooth_module::get_device. The first function takes a
+ * \ref artik_bt_device_type argument specifying which type of devices to
+ * return in the list. The second function returns complete information about
+ * a single device. The \ref artik_bluetooth_module::free_devices arguments
+ * have been changed accordingly, and a new
+ * \ref artik_bluetooth_module::free_device has been added.
+ *
+ * New events have been added to the \ref artik_bt_event enumeration:
+ * - BT_EVENT_SPP_CONNECT
+ * - BT_EVENT_SPP_RELEASE
+ * - BT_EVENT_SPP_DISCONNECT
+ * - BT_EVENT_AGENT_REQUEST_PINCODE
+ * - BT_EVENT_AGENT_DISPLAY_PINCODE
+ * - BT_EVENT_AGENT_REQUEST_PASSKEY
+ * - BT_EVENT_AGENT_DISPLAY_PASSKEY
+ * - BT_EVENT_AGENT_CONFIRM
+ * - BT_EVENT_AGENT_AUTHORIZE
+ * - BT_EVENT_AGENT_AUTHORIZE_SERVICE
+ * - BT_EVENT_AGENT_RELEASE
+ * - BT_EVENT_AGENT_CANCEL
+ *
+ * \b BT_EVENT_GATT_PROPERTY event is replaced by \b BT_EVENT_SERVICE_RESOLVED.
+ *
+ * \b BT_EVENT_PF_CUSTOM event is replaced by \b BT_EVENT_GATT_CHARACTERISTIC.
+ *
+ * \subsubsection one_four_to_one_five_bt_avrcp AVRCP service
+ *
+ * The following functions had their parameter changed from a string
+ * containing the name of an item to an integer containing the index of the
+ * item:
+ * - \ref artik_bluetooth_module::avrcp_controller_change_folder
+ * - \ref artik_bluetooth_module::avrcp_controller_get_property
+ * - \ref artik_bluetooth_module::avrcp_controller_play_item
+ * - \ref artik_bluetooth_module::avrcp_controller_add_to_playing
+ *
+ * \ref artik_bluetooth_module::avrcp_controller_is_connected prototype has
+ * been modified to directly return the connection status instead of an error
+ * code.
+ *
+ * \subsubsection one_four_to_one_five_bt_avrcp PAN service
+ *
+ * \ref artik_bluetooth_module::pan_is_connected prototype has
+ * been modified to directly return the connection status instead of an error
+ * code.
+ *
+ */
