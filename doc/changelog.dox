@@ -86,7 +86,7 @@
  * been modified to directly return the connection status instead of an error
  * code.
  *
- * \subsubsection one_four_to_one_five_bt_avrcp PAN service
+ * \subsubsection one_four_to_one_five_bt_pan PAN service
  *
  * \ref artik_bluetooth_module::pan_is_connected prototype has
  * been modified to directly return the connection status instead of an error
