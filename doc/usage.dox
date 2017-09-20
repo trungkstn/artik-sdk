@@ -8,14 +8,14 @@
  * if it is the case on a specific board, type the following command on
  * the target:
  *
- * \b Fedora
-\verbatim
-$ dnf info libartik-sdk-base
-\endverbatim
- *
  * \b Ubuntu
 \verbatim
 $ apt show libartik-sdk-base
+\endverbatim
+ *
+ * \b Fedora
+\verbatim
+$ dnf info libartik-sdk-base
 \endverbatim
  *
  * If no package is listed then the ARTIK board is missing the repository
@@ -23,6 +23,30 @@ $ apt show libartik-sdk-base
  * repository. Otherwise you can directly jump to the \ref update_sdk section.
  *
  * \subsection repo_config Configuring the ARTIK package repository
+ *
+ * \b Ubuntu
+ *
+ * Add the package repository to Ubuntu's repository list as follows:
+\verbatim
+$ echo "deb http://repo.artik.cloud/artik/bin/pub/artik/ubuntu xenial main" > /etc/apt/sources.list.d/artik-e2e-sources.list
+\endverbatim
+ *
+ * Download and install the associated public key for verifying signatures
+ * of downloaded packages.
+ *
+\verbatim
+$ apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 55955AEB
+gpg: requesting key 55955AEB from hkp server keyserver.ubuntu.com
+gpg: key 55955AEB: public key "ARTIK Ubuntu Package Repository (Samsung ARTIK) <artie@artik.io>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1  (RSA: 1)
+\endverbatim
+ *
+ * Update the package index of the board to take the new packages into account.
+ *
+\verbatim
+$ apt update
+\endverbatim
  *
  * \b Fedora
  *
@@ -72,30 +96,6 @@ Nb0z4J5LYa1ci8t3mEXnzMQMqlqUFOCfve5p
 $ dnf makecache --refresh
 \endverbatim
  *
- * \b Ubuntu
- * 
- * Add the package repository to Ubuntu's repository list as follows:
-\verbatim
-$ echo "deb http://repo.artik.cloud/artik/bin/pub/artik/ubuntu xenial main" > /etc/apt/sources.list.d/artik-e2e-sources.list
-\endverbatim
- *
- * Download and install the associated public key for verifying signatures
- * of downloaded packages.
- *
-\verbatim
-$ apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 55955AEB
-gpg: requesting key 55955AEB from hkp server keyserver.ubuntu.com
-gpg: key 55955AEB: public key "ARTIK Ubuntu Package Repository (Samsung ARTIK) <artie@artik.io>" imported
-gpg: Total number processed: 1
-gpg:               imported: 1  (RSA: 1)
-\endverbatim
- *
- * Update the package index of the board to take the new packages into account.
- *
-\verbatim
-$ apt-get install libartik-sdk
-\endverbatim
- *
  * \subsection install_sdk Installing the SDK libraries
  *
  * The SDK modules are separated in different modules that can be installed
@@ -120,16 +120,16 @@ $ apt-get install libartik-sdk
  *
  * To install a specific package, simply use the following command:
  *
- * \b Fedora
- *
-\verbatim
-$ dnf install libartik-sdk-systemio
-\endverbatim
- *
  * \b Ubuntu
  *
 \verbatim
 $ apt install libartik-sdk-systemio
+\endverbatim
+ *
+ * \b Fedora
+ *
+\verbatim
+$ dnf install libartik-sdk-systemio
 \endverbatim
  *
  * <b>Note</b>: in this example, the <b>libartik-sdk-base</b> package will be
@@ -138,16 +138,16 @@ $ apt install libartik-sdk-systemio
  * To install all the modules packages, you can install the following meta
  * package:
  *
- * \b Fedora
- *
-\verbatim
-$ dnf install libartik-sdk
-\endverbatim
- *
  * \b Ubuntu
  *
 \verbatim
 $ apt install libartik-sdk
+\endverbatim
+ *
+ * \b Fedora
+ *
+\verbatim
+$ dnf install libartik-sdk
 \endverbatim
  *
  * \subsection install_tests Installing the test programs
@@ -155,16 +155,16 @@ $ apt install libartik-sdk
  * The <b>libartik-sdk-tests</b> package contains test programs to try out the
  * SDK libraries. It can be installed using:
  *
- * \b Fedora
- *
-\verbatim
-$ dnf install libartik-sdk-tests
-\endverbatim
- *
  * \b Ubuntu
  *
 \verbatim
 $ apt install libartik-sdk-tests
+\endverbatim
+ *
+ * \b Fedora
+ *
+\verbatim
+$ dnf install libartik-sdk-tests
 \endverbatim
  *
  * <b>Note</b>: as the <b>libartik-sdk-tests</b> package contains tests for all
@@ -177,16 +177,16 @@ $ apt install libartik-sdk-tests
  * released version, use the update command. You can also update specific
  * packages only as shown in the example below.
  *
- * \b Fedora
- *
-\verbatim
-$ dnf update libartik-sdk-base libartik-sdk-systemio
-\endverbatim
- *
  * \b Ubuntu
  *
 \verbatim
 $ apt upgrade libartik-sdk-base libartik-sdk-systemio
+\endverbatim
+ *
+ * \b Fedora
+ *
+\verbatim
+$ dnf upgrade libartik-sdk-base libartik-sdk-systemio
 \endverbatim
  *
  * \section link Linking programs against the ARTIK SDK
@@ -198,26 +198,20 @@ $ apt upgrade libartik-sdk-base libartik-sdk-systemio
  * packages including required header files are availabe for installation, named
  * as follows:
  *
+ * \b Ubuntu
+ *
+\verbatim
+$ apt install libartik-sdk-<name>-dev
+\endverbatim
+ *
  * \b Fedora
  *
 \verbatim
 $ dnf install libartik-sdk-<name>-devel
 \endverbatim
  *
- * \b Ubuntu
- *
-\verbatim
-$ dnf install libartik-sdk-<name>-dev
-\endverbatim
- *
  * If you want to install the development packages of all the modules at once,
  * install the following meta package:
- *
- * \b Fedora
- *
-\verbatim
-$ dnf install libartik-sdk-devel
-\endverbatim
  *
  * \b Ubuntu
  *
@@ -225,21 +219,27 @@ $ dnf install libartik-sdk-devel
 $ apt install libartik-sdk-dev
 \endverbatim
  *
+ * \b Fedora
+ *
+\verbatim
+$ dnf install libartik-sdk-devel
+\endverbatim
+ *
  * You need to install these packages before being able to include the header
  * files describing the APIs you can call for each library. For instance if you
  * want to use the ARTIK Cloud features from the associated <b>connectivity</b>
  * library, you should install the development package below:
  *
- * \b Fedora
- *
-\verbatim
-$ dnf install libartik-sdk-connectivity-devel
-\endverbatim
- *
  * \b Ubuntu
  *
 \verbatim
 $ apt install libartik-sdk-connectivity-dev
+\endverbatim
+ *
+ * \b Fedora
+ *
+\verbatim
+$ dnf install libartik-sdk-connectivity-devel
 \endverbatim
  *
  * \subsection lib_naming Shared libraries naming
@@ -528,7 +528,7 @@ clean:
  * using the following commands.
  *
 \verbatim
-$ export PATH=/opt/toolchains/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf/bin:$PATH
+$ export PATH=/opt/toolchains/gcc-linaro-6.4.1-2017.08-x86_64_arm-linux-gnueabihf/bin:$PATH
 $ export CROSS_COMPILE=arm-linux-gnueabihf-
 $ export SYSROOT=/opt/sysroots/artik-sysroot
 $ make
