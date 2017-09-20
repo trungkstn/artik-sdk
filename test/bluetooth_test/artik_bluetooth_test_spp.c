@@ -237,8 +237,8 @@ static artik_error set_callback(void)
 		{BT_EVENT_AGENT_REQUEST_PASSKEY, callback_on_agent_request_passkey,
 			NULL},
 		{BT_EVENT_AGENT_CONFIRM, callback_on_agent_confirmation, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE, callback_on_agent_authorization, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE_SERVICE, callback_on_agent_authorize_service,
+		{BT_EVENT_AGENT_AUTHORIZE, callback_on_agent_authorization, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE_SERVICE, callback_on_agent_authorize_service,
 			NULL}
 	};
 

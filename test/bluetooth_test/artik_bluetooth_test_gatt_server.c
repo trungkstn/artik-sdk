@@ -161,8 +161,8 @@ static void set_callbacks(void)
 
 	artik_bt_callback_property cb[] = {
 		{BT_EVENT_AGENT_CONFIRM, on_confirmation_request, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE, on_authorization_request, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE_SERVICE, on_connection_request, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE, on_authorization_request, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE_SERVICE, on_connection_request, NULL},
 		{BT_EVENT_BOND, on_bond, NULL},
 		{BT_EVENT_CONNECT, on_connect, NULL}
 	};

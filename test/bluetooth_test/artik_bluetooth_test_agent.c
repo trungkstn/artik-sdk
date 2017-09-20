@@ -171,8 +171,8 @@ static artik_error test_bluetooth_agent(void)
 		{BT_EVENT_AGENT_REQUEST_PASSKEY, callback_on_request_passkey, NULL},
 		{BT_EVENT_AGENT_DISPLAY_PASSKEY, callback_on_display_passkey, NULL},
 		{BT_EVENT_AGENT_CONFIRM, callback_on_confirmation, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE, callback_on_authorization, NULL},
-		{BT_EVENT_AGENT_AUTHOREZE_SERVICE, callback_on_authorize_service, NULL}
+		{BT_EVENT_AGENT_AUTHORIZE, callback_on_authorization, NULL},
+		{BT_EVENT_AGENT_AUTHORIZE_SERVICE, callback_on_authorize_service, NULL}
 	};
 
 	ret = bt->set_callbacks(agent_callback, 7);

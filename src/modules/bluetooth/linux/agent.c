@@ -172,13 +172,13 @@ static void _agent_callback(artik_bt_event event, void *data)
 			confirmation_property->device,
 			confirmation_property->passkey);
 		break;
-	case BT_EVENT_AGENT_AUTHOREZE:
+	case BT_EVENT_AGENT_AUTHORIZE:
 		request_property = (artik_bt_agent_request_property *)data;
 
 		default_request_authorization(request_property->handle,
 			request_property->device);
 		break;
-	case BT_EVENT_AGENT_AUTHOREZE_SERVICE:
+	case BT_EVENT_AGENT_AUTHORIZE_SERVICE:
 		authorize_property = (artik_bt_agent_authorize_property *)data;
 
 		default_authorize_service(authorize_property->handle,
@@ -312,7 +312,7 @@ static void _handle_request_authorization(GVariant *parameters,
 	request_property.handle = invocation;
 	request_property.device = device;
 
-	_agent_callback(BT_EVENT_AGENT_AUTHOREZE, (void *)&request_property);
+	_agent_callback(BT_EVENT_AGENT_AUTHORIZE, (void *)&request_property);
 
 	g_free(device);
 	g_free(path);
@@ -331,7 +331,7 @@ static void _handle_authorize_service(GVariant *parameters,
 	authorize_property.device = device;
 	authorize_property.uuid = uuid;
 
-	_agent_callback(BT_EVENT_AGENT_AUTHOREZE_SERVICE, (void *)&authorize_property);
+	_agent_callback(BT_EVENT_AGENT_AUTHORIZE_SERVICE, (void *)&authorize_property);
 
 	g_free(device);
 	g_free(path);

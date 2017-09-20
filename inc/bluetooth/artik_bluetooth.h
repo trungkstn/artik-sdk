@@ -82,8 +82,8 @@ extern "C" {
 		BT_EVENT_AGENT_REQUEST_PASSKEY, /*<! This event is raised when request passkey*/
 		BT_EVENT_AGENT_DISPLAY_PASSKEY, /*<! This event is raised when display passkey*/
 		BT_EVENT_AGENT_CONFIRM, /*<! This event is raised when need to confirm the passkey*/
-		BT_EVENT_AGENT_AUTHOREZE, /*<! This event is raised when need to authorize the connection*/
-		BT_EVENT_AGENT_AUTHOREZE_SERVICE, /*<! This event is raised when need to authorize the seivece*/
+		BT_EVENT_AGENT_AUTHORIZE, /*<! This event is raised when need to authorize the connection*/
+		BT_EVENT_AGENT_AUTHORIZE_SERVICE, /*<! This event is raised when need to authorize the service*/
 		BT_EVENT_AGENT_RELEASE, /*<! This event is raised when agent is released*/
 		BT_EVENT_AGENT_CANCEL, /*<! This event is raised when agent is canceled*/
 		BT_EVENT_PROXIMITY,
@@ -879,7 +879,7 @@ extern "C" {
 
 	/*!
 	 * \brief the struct of callback user data in BT_EVENT_AGENT_REQUEST_PINCODE,
-		BT_EVENT_AGENT_REQUEST_PASSKEY and BT_EVENT_AGENT_AUTHOREZE event.
+		BT_EVENT_AGENT_REQUEST_PASSKEY and BT_EVENT_AGENT_AUTHORIZE event.
 	 */
 	typedef struct {
 		/*<! The handle to be passed to the callbakc functions */
@@ -923,7 +923,7 @@ extern "C" {
 	} artik_bt_agent_confirmation_property;
 
 	/*!
-	 * \brief the struct of callback user data in BT_EVENT_AGENT_AUTHOREZE_SERVICE event.
+	 * \brief the struct of callback user data in BT_EVENT_AGENT_AUTHORIZE_SERVICE event.
 	 */
 	typedef struct {
 		/*<! The handle to be passed to the callbakc functions */
