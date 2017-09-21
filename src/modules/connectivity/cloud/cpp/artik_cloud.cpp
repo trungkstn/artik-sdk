@@ -99,6 +99,18 @@ artik_error artik::Cloud::delete_device(const char *device_id, char **response,
   return m_module->delete_device(m_token, device_id, response, ssl);
 }
 
+artik_error artik::Cloud::get_device_properties(const char *device_id,
+    bool timestamp, char **response, artik_ssl_config *ssl) {
+  return m_module->get_device_properties(m_token, device_id, timestamp,
+      response, ssl);
+}
+
+artik_error artik::Cloud::set_device_server_properties(const char *device_id,
+    const char *data, char **response, artik_ssl_config *ssl) {
+  return m_module->set_device_server_properties(m_token, device_id, data,
+      response, ssl);
+}
+
 artik_error artik::Cloud::sdr_start_registration(const char* device_type_id,
     const char* vendor_id, char **response) {
   return m_module->sdr_start_registration(device_type_id, vendor_id, response);

@@ -56,6 +56,11 @@
 						"tokens")
 #define ARTIK_CLOUD_URL_DELETE_DEVICE_TOKEN	ARTIK_CLOUD_URL("devices/%s/"\
 						"tokens")
+#define ARTIK_CLOUD_URL_GET_DEVICE_PROPS	ARTIK_CLOUD_URL("devicemgmt/"\
+						"devices/%s/properties?"\
+						"includeTimestamp=%s")
+#define ARTIK_CLOUD_URL_SET_DEVICE_SERV_PROPS	ARTIK_CLOUD_URL("devicemgmt/"\
+						"devices/%s/serverproperties")
 
 #define ARTIK_CLOUD_SECURE_URL(x)		("https://s-api.artik.cloud/"\
 						"v1.1/" x)
@@ -150,6 +155,16 @@ static artik_error delete_device_token(const char *access_token,
 static artik_error delete_device(const char *access_token,
 	const char *device_id, char **response,
 	artik_ssl_config *ssl_config);
+static artik_error get_device_properties(const char *access_token,
+	const char *device_id,
+	bool timestamp,
+	char **response,
+	artik_ssl_config *ssl_config);
+static artik_error set_device_server_properties(const char *access_token,
+	const char *device_id,
+	const char *data,
+	char **response,
+	artik_ssl_config *ssl_config);
 static artik_error sdr_start_registration(const char *device_type_id,
 	const char *vendor_id,
 	char **response);
@@ -185,6 +200,8 @@ const artik_cloud_module cloud_module = {
 	update_device_token,
 	delete_device_token,
 	delete_device,
+	get_device_properties,
+	set_device_server_properties,
 	sdr_start_registration,
 	sdr_registration_status,
 	sdr_complete_registration,
@@ -816,6 +833,124 @@ artik_error delete_device(const char *access_token, const char *device_id,
 	}
 
 exit:
+	artik_release_api_module(http);
+
+	return ret;
+}
+
+static artik_error get_device_properties(const char *access_token,
+					 const char *device_id,
+					 bool timestamp,
+					 char **response,
+					 artik_ssl_config *ssl_config)
+{
+	artik_http_module *http = (artik_http_module *)
+					artik_request_api_module("http");
+	artik_error ret = S_OK;
+	int status;
+	char url[ARTIK_CLOUD_URL_MAX];
+	char bearer[ARTIK_CLOUD_TOKEN_MAX];
+	artik_http_headers headers;
+	artik_http_header_field fields[] = {
+		{"Authorization", NULL},
+		{"Content-Type", "application/json"},
+	};
+
+	log_dbg("");
+
+	if (!device_id)
+		return E_BAD_ARGS;
+
+	headers.fields = fields;
+	headers.num_fields = ARRAY_SIZE(fields);
+
+	/* Build up authorization header */
+	snprintf(bearer, ARTIK_CLOUD_TOKEN_MAX, "Bearer %s", access_token);
+	fields[0].data = bearer;
+
+	/* Build up url with parameters */
+	snprintf(url, ARTIK_CLOUD_URL_MAX, ARTIK_CLOUD_URL_GET_DEVICE_PROPS,
+		device_id, timestamp ? "true" : "false");
+
+	/* Perform the request */
+	ret = http->get(url, &headers, response, &status, ssl_config);
+	if (ret != S_OK)
+		goto exit;
+
+	/* Check HTTP status code */
+	if (status != 200) {
+		log_err("HTTP error %d", status);
+		ret = E_HTTP_ERROR;
+	}
+
+exit:
+	artik_release_api_module(http);
+
+	return ret;
+
+}
+
+static artik_error set_device_server_properties(const char *access_token,
+						const char *device_id,
+						const char *data,
+						char **response,
+						artik_ssl_config *ssl_config)
+{
+	artik_http_module *http = (artik_http_module *)
+					artik_request_api_module("http");
+	artik_error ret = S_OK;
+	char *body = NULL;
+	int body_len;
+	int status;
+	char url[ARTIK_CLOUD_URL_MAX];
+	char bearer[ARTIK_CLOUD_TOKEN_MAX];
+	artik_http_headers headers;
+	artik_http_header_field fields[] = {
+		{"Authorization", NULL},
+		{"Content-Type", "application/json"},
+	};
+
+	log_dbg("");
+
+	if (!device_id || !data)
+		return E_BAD_ARGS;
+
+	headers.fields = fields;
+	headers.num_fields = ARRAY_SIZE(fields);
+
+	/* Build up authorization header */
+	snprintf(bearer, ARTIK_CLOUD_TOKEN_MAX, "Bearer %s", access_token);
+	fields[0].data = bearer;
+
+	/* Build up url with parameters */
+	snprintf(url, ARTIK_CLOUD_URL_MAX,
+		ARTIK_CLOUD_URL_SET_DEVICE_SERV_PROPS, device_id);
+
+	/* Build up message body */
+	body_len = strlen(data) + 1;
+
+	body = (char *)malloc(body_len);
+	if (!body) {
+		log_err("Failed to allocate memory");
+		return E_NO_MEM;
+	}
+
+	memcpy(body, data, body_len);
+
+	/* Perform the request */
+	ret = http->post(url, &headers, body, response, &status, ssl_config);
+	if (ret != S_OK)
+		goto exit;
+
+	/* Check HTTP status code */
+	if (status != 200) {
+		log_err("HTTP error: %d", status);
+		ret = E_HTTP_ERROR;
+	}
+
+exit:
+	free(body);
+
 	artik_release_api_module(http);
 
 	return ret;

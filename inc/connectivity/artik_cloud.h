@@ -332,7 +332,48 @@ typedef struct {
 				const char *device_id,
 				char **response,
 				artik_ssl_config * ssl);
-
+	/*!
+	 *  \brief Get a device's properties (server/system/device properties)
+	 *
+	 *  \param[in] access_token Authorization token
+	 *  \param[in] device_id ID of the device to read properties from
+	 *  \param[in] timestamp Include timestamp
+	 *  \param[out] response Pointer to a string allocated and filled
+	 *              up by the function with the
+	 *              response JSON data returned by the Cloud. It
+	 *              should be freed by the calling
+	 *              function after use.
+	 *  \param[in] ssl SSL configuration to use when targeting https
+	 *             urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*get_device_properties) (const char *access_token,
+					const char *device_id,
+					bool timestamp,
+					char **response,
+					artik_ssl_config * ssl);
+	/*!
+	 *  \brief Set a device's server properties
+	 *
+	 *  \param[in] access_token Authorization token
+	 *  \param[in] device_id ID of the device to set server properties to
+	 *  \param[in] data JSON data for setting a device's server properties
+	 *  \param[out] response Pointer to a string allocated and filled
+	 *              up by the function with the
+	 *              response JSON data returned by the Cloud. It
+	 *              should be freed by the calling
+	 *              function after use.
+	 *  \param[in] ssl SSL configuration to use when targeting https
+	 *             urls. Can be NULL.
+	 *
+	 *  \return S_OK on success, error code otherwise
+	 */
+	artik_error(*set_device_server_properties) (const char *access_token,
+					const char *device_id,
+					const char *data,
+					char **response,
+					artik_ssl_config * ssl);
 	/*!
 	 *  \brief Start Secure Device Registration process
 	 *

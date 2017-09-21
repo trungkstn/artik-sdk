@@ -67,6 +67,10 @@ class Cloud {
       artik_ssl_config *ssl);
   artik_error delete_device(const char *device_id, char **response,
       artik_ssl_config *ssl);
+  artik_error get_device_properties(const char *device_id,
+      bool timestamp, char **response, artik_ssl_config *ssl);
+  artik_error set_device_server_properties(const char *device_id,
+      const char *data, char **response, artik_ssl_config *ssl_config);
   artik_error sdr_start_registration(const char* device_type_id,
       const char* vendor_id, char **response);
   artik_error sdr_registration_status(const char* reg_id, char **response);

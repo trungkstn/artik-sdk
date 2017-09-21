@@ -32,6 +32,8 @@ static char *app_id = NULL;
 static char *message = NULL;
 static char *action = NULL;
 static char *device_type_id = NULL;
+static char *data = NULL;
+static bool timestamp = false;
 
 static char *parse_json_object(const char *data, const char *obj)
 {
@@ -446,6 +448,68 @@ exit:
 	return ret;
 }
 
+static artik_error test_get_device_properties(const char *t, const char *uid,
+					bool ts, artik_ssl_config ssl_config)
+{
+	artik_cloud_module *cloud = (artik_cloud_module *)
+					artik_request_api_module("cloud");
+	artik_error ret = S_OK;
+	char *response = NULL;
+
+	fprintf(stdout, "TEST: %s starting\n", __func__);
+
+	ret = cloud->get_device_properties(t, uid, ts, &response, &ssl_config);
+
+	if (response) {
+		fprintf(stdout, "TEST: %s response data: %s\n", __func__,
+			response);
+		free(response);
+	}
+
+	if (ret != S_OK) {
+		fprintf(stdout, "TEST: %s failed (err=%d)\n", __func__, ret);
+		return ret;
+	}
+
+	fprintf(stdout, "TEST: %s succeeded\n", __func__);
+
+	artik_release_api_module(cloud);
+
+	return ret;
+}
+
+static artik_error test_set_device_server_properties(const char *t,
+					const char *uid, const char *d,
+					artik_ssl_config ssl_config)
+{
+	artik_cloud_module *cloud = (artik_cloud_module *)
+					artik_request_api_module("cloud");
+	artik_error ret = S_OK;
+	char *response = NULL;
+
+	fprintf(stdout, "TEST: %s starting\n", __func__);
+
+	ret = cloud->set_device_server_properties(t, uid, d, &response,
+								&ssl_config);
+
+	if (response) {
+		fprintf(stdout, "TEST: %s response data: %s\n", __func__,
+			response);
+		free(response);
+	}
+
+	if (ret != S_OK) {
+		fprintf(stdout, "TEST: %s failed (err=%d)\n", __func__, ret);
+		return ret;
+	}
+
+	fprintf(stdout, "TEST: %s succeeded\n", __func__);
+
+	artik_release_api_module(cloud);
+
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
 	artik_error ret = S_OK;
@@ -463,7 +527,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	while ((opt = getopt(argc, argv, "t:d:u:p:m:a:y:r:v")) != -1) {
+	while ((opt = getopt(argc, argv, "t:d:u:p:m:a:y:b:sr:v")) != -1) {
 		switch (opt) {
 		case 't':
 			token = strndup(optarg, strlen(optarg));
@@ -485,6 +549,12 @@ int main(int argc, char *argv[])
 			break;
 		case 'y':
 			device_type_id = strndup(optarg, strlen(optarg));
+			break;
+		case 'b':
+			data = strndup(optarg, strlen(optarg));
+			break;
+		case 's':
+			timestamp = true;
 			break;
 		case 'v':
 			ssl_config.verify_cert = ARTIK_SSL_VERIFY_REQUIRED;
@@ -508,7 +578,8 @@ int main(int argc, char *argv[])
 			printf("\t[-p <app id>] [-m <JSON type message>]"\
 				" [-a <JSON type action>] \r\n");
 			printf("\t[-r <CA root file>]"\
-				" [-y <device type id>]\r\n");
+				" [-y <device type id>]"\
+				" [-b <data JSON>] [-s enables timestamp]\r\n");
 			printf("\t[-v for verifying root certificate]\r\n");
 			return 0;
 		}
@@ -561,7 +632,17 @@ int main(int argc, char *argv[])
 		goto exit;
 
 	ret = test_add_delete_device(token, user_id, device_type_id,
-								ssl_config);
+							ssl_config);
+	if (ret != S_OK)
+		goto exit;
+
+	ret = test_set_device_server_properties(token, device_id, data,
+							ssl_config);
+	if (ret != S_OK)
+		goto exit;
+
+	ret = test_get_device_properties(token, device_id, timestamp,
+							ssl_config);
 
 exit:
 	if (token != NULL)
@@ -578,6 +659,8 @@ exit:
 		free(action);
 	if (device_type_id != NULL)
 		free(device_type_id);
+	if (data != NULL)
+		free(data);
 	if (root_ca != NULL)
 		free(root_ca);
 
