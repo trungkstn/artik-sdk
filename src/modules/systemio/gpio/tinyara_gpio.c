@@ -60,6 +60,7 @@ artik_error os_gpio_request(artik_gpio_config *config)
 	if (!user_data)
 		return -E_NO_MEM;
 
+	memset(user_data, 0, sizeof(user_data));
 	config->user_data = user_data;
 
 	char path_str[PATH_MAX];
