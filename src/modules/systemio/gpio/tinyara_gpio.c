@@ -32,16 +32,24 @@
 
 #include <tinyara/fs/ioctl.h>
 
-#define GPIO_DIRECTION_OUT	1
-#define GPIO_DIRECTION_IN	2
-#define GPIO_DRIVE_PULLUP	1
-#define GPIO_DRIVE_PULLDOWN	2
-#define GPIO_CMD_SET_DIRECTION	_GPIOIOC(0x0001)
+#define GPIO_DIRECTION_OUT     1
+#define GPIO_DIRECTION_IN      2
+#define GPIO_DRIVE_PULLUP      1
+#define GPIO_DRIVE_PULLDOWN    2
+#define GPIO_CMD_SET_DIRECTION _GPIOIOC(0x0001)
+#define GPIO_STACK_SIZE        2048
+#define GPIO_SCHED_PRI         100
+#define GPIO_SCHED_POLICY      SCHED_RR
 
 typedef struct {
+	int watch_id;
 	int fd;
 	fd_set rdfs;
+	artik_gpio_callback callback;
 	void *user_data;
+	pthread_t thread_id;
+	bool quit;
+	artik_gpio_id id;
 } os_gpio_data;
 
 artik_error os_gpio_request(artik_gpio_config *config)
@@ -63,8 +71,11 @@ artik_error os_gpio_request(artik_gpio_config *config)
 		os_gpio_release(config);
 		return E_ACCESS_DENIED;
 	}
+
 	FD_ZERO(&user_data->rdfs);
 	FD_SET(user_data->fd, &user_data->rdfs);
+
+	user_data->id = config->id;
 
 	return S_OK;
 }
@@ -109,13 +120,82 @@ artik_error os_gpio_write(artik_gpio_config *config, int value)
 	return S_OK;
 }
 
+static void *os_gpio_change_callback(void *user_data)
+{
+	os_gpio_data *data = (os_gpio_data *)user_data;
+	struct pollfd poll_gpio;
+
+	poll_gpio.fd = data->fd;
+	poll_gpio.events = POLLPRI;
+
+	while (!data->quit) {
+		if (poll(&poll_gpio, 1, 100) >= 0) {
+			if (poll_gpio.revents & POLLPRI) {
+				char buf[4];
+
+				if (lseek(poll_gpio.fd, 0, SEEK_SET) < 0)
+					break;
+
+				if (read(poll_gpio.fd, buf, sizeof(buf)) < 0)
+					break;
+
+				if (data->callback)
+					data->callback(data->user_data, (buf[0] == '0') ? 0 : 1);
+			}
+		} else {
+			break;
+		}
+	}
+
+	pthread_exit(0);
+}
+
 artik_error os_gpio_set_change_callback(artik_gpio_config *config,
 				artik_gpio_callback callback, void *user_data)
 {
+	os_gpio_data *data = (os_gpio_data *)config->user_data;
+	pthread_attr_t attr;
+	int status;
+	struct sched_param sparam;
+	char thread_name[16];
+
+	if (data->callback)
+		return E_BUSY;
+
+	if (!callback)
+		return E_BAD_ARGS;
+
+	data->callback = callback;
+	data->user_data = user_data;
+	data->quit = false;
+
+	status = pthread_attr_init(&attr);
+	if (status != 0)
+		return E_NOT_INITIALIZED;
+
+	sparam.sched_priority = GPIO_SCHED_PRI;
+	pthread_attr_setschedparam(&attr, &sparam);
+	pthread_attr_setschedpolicy(&attr, GPIO_SCHED_POLICY);
+	pthread_attr_setstacksize(&attr, GPIO_STACK_SIZE);
+	status = pthread_create(&data->thread_id, &attr,
+					os_gpio_change_callback, (void *)data);
+	if (status < 0)
+		return E_NOT_INITIALIZED;
+
+	snprintf(thread_name, 16, "GPIO%d Watch", data->id);
+	pthread_setname_np(data->thread_id, thread_name);
+
 	return S_OK;
 }
 
 void os_gpio_unset_change_callback(artik_gpio_config *config)
 {
+	os_gpio_data *data = (os_gpio_data *)config->user_data;
 
+	if (!data->callback)
+		return;
+
+	data->quit = true;
+	pthread_join(data->thread_id, NULL);
+	data->callback = NULL;
 }
