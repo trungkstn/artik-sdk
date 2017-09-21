@@ -42,7 +42,6 @@
  * \ref artik_bluetooth_module::set_callback "set_callback".
  *
  * The following functions have been removed:
- * - \b get_devices
  * - \b get_paired_devices
  * - \b get_connected_devices
  *
@@ -85,6 +84,9 @@
  * \ref artik_bluetooth_module::avrcp_controller_is_connected prototype has
  * been modified to directly return the connection status instead of an error
  * code.
+ *
+ * \b artik_bluetooth_module::avrcp_controller_get_browsable has been renamed
+ * to \ref artik_bluetooth_module::avrcp_controller_is_browsable.
  *
  * \subsubsection one_four_to_one_five_bt_pan PAN service
  *
