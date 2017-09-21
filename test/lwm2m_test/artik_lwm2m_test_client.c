@@ -345,7 +345,14 @@ artik_error test_lwm2m_default(void)
 					5000, 1500, 100, 1000000, 200000,
 					"Europe/Paris", "+01:00", "U");
 
-	ret = lwm2m->client_connect(&client_h, &config);
+	ret = lwm2m->client_request(&client_h, &config);
+	if (ret != S_OK)
+		goto exit;
+
+	ret = lwm2m->client_connect(client_h);
+	if (ret != S_OK)
+		goto exit;
+
 	test_serialization(client_h);
 	if (ret != S_OK)
 		goto exit;
@@ -376,6 +383,7 @@ artik_error test_lwm2m_default(void)
 exit:
 	lwm2m->client_disconnect(client_h);
 	lwm2m->free_object(config.objects[ARTIK_LWM2M_OBJECT_DEVICE]);
+	lwm2m->client_release(client_h);
 	fprintf(stdout, "TEST: %s %s\n", __func__,
 			(ret == S_OK) ? "succeeded" : "failed");
 	return ret;

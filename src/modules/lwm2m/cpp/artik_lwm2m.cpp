@@ -28,8 +28,16 @@ artik::Lwm2m::~Lwm2m() {
   artik_release_api_module(reinterpret_cast<void*>(this->m_module));
 }
 
-artik_error artik::Lwm2m::client_connect(artik_lwm2m_config *params) {
-  return this->m_module->client_connect(&this->m_handle, params);
+artik_error artik::Lwm2m::client_request(artik_lwm2m_config *params) {
+  return this->m_module->client_request(&this->m_handle, params);
+}
+
+artik_error artik::Lwm2m::client_release() {
+  return this->m_module->client_release(this->m_handle);
+}
+
+artik_error artik::Lwm2m::client_connect() {
+  return this->m_module->client_connect(this->m_handle);
 }
 
 artik_error artik::Lwm2m::client_disconnect() {

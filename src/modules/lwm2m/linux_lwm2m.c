@@ -30,7 +30,7 @@
 typedef struct {
 	artik_list node;
 
-	artik_lwm2m_config config;
+	object_container_t *container;
 	client_handle_t *client;
 	artik_lwm2m_callback callbacks[ARTIK_LWM2M_EVENT_COUNT];
 	void *callbacks_params[ARTIK_LWM2M_EVENT_COUNT];
@@ -190,14 +190,14 @@ static void on_resource_changed(void *user_data, void *extra)
 	}
 }
 
-artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
+artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle,
 				artik_lwm2m_config *config)
 {
 	artik_security_module *security = NULL;
 	artik_security_handle sec_handle = NULL;
 	lwm2m_node *node = NULL;
-	object_container_t objects;
-	object_security_server_t server;
+	object_container_t *objects;
+	object_security_server_t *server;
 	artik_error ret = S_OK;
 	int i;
 
@@ -207,133 +207,237 @@ artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 		return E_BAD_ARGS;
 
 	node = (lwm2m_node *) artik_list_add(&nodes, 0, sizeof(lwm2m_node));
-	if (!node)
+	objects = malloc(sizeof(object_container_t));
+	server = malloc(sizeof(object_security_server_t));
+	if (!node || !objects || !server)
 		return E_NO_MEM;
 
 	node->loop_module =  (artik_loop_module *)
 					artik_request_api_module("loop");
 
 	/* Fill up server object based on passed config */
-	memset(&server, 0, sizeof(server));
-	strncpy(server.serverUri, config->server_uri, LWM2M_MAX_STR_LEN);
-	strncpy(server.client_name, config->name, LWM2M_MAX_STR_LEN);
-	server.securityMode = LWM2M_SEC_MODE_PSK;
+	memset(objects, 0, sizeof(object_container_t));
+	memset(server, 0, sizeof(object_security_server_t));
+
+	strncpy(server->serverUri, config->server_uri, LWM2M_MAX_STR_LEN);
+	strncpy(server->client_name, config->name, LWM2M_MAX_STR_LEN);
+	server->securityMode = LWM2M_SEC_MODE_PSK;
 
 	if (config->ssl_config) {
 		if (!config->tls_psk_key) {
-			artik_list_delete_node(&nodes, (artik_list *)node);
-			return E_BAD_ARGS;
+			ret = E_BAD_ARGS;
+			goto exit;
 		}
 
-		server.verifyCert = config->ssl_config->verify_cert == ARTIK_SSL_VERIFY_REQUIRED;
+		server->verifyCert = config->ssl_config->verify_cert == ARTIK_SSL_VERIFY_REQUIRED;
 
 		if (!config->ssl_config->use_se
 			&& config->ssl_config->client_cert.data && config->ssl_config->client_cert.len
 			&& config->ssl_config->client_key.data && config->ssl_config->client_key.len) {
-			server.clientCertificateOrPskId = strdup(config->ssl_config->client_cert.data);
-			server.privateKey = strdup(config->ssl_config->client_key.data);
-			server.securityMode = LWM2M_SEC_MODE_CERT;
+			server->clientCertificateOrPskId = strdup(config->ssl_config->client_cert.data);
+			server->privateKey = strdup(config->ssl_config->client_key.data);
+			server->securityMode = LWM2M_SEC_MODE_CERT;
 		} else if (config->ssl_config->use_se) {
 			security = (artik_security_module *)artik_request_api_module("security");
 			if (!security) {
-				artik_list_delete_node(&nodes, (artik_list *)node);
 				log_dbg("Unable to request security module");
-				return E_SECURITY_ERROR;
+				ret = E_SECURITY_ERROR;
+				goto exit;
 			}
 
 			ret = security->request(&sec_handle);
 			if (ret != S_OK) {
-				artik_list_delete_node(&nodes, (artik_list *)node);
 				log_dbg("Unable to request security handle");
 				artik_release_api_module(security);
-				return ret;
+				goto exit;
 			}
 
-			ret = security->get_certificate(sec_handle, &server.clientCertificateOrPskId);
+			ret = security->get_certificate(sec_handle, &server->clientCertificateOrPskId);
 			if (ret != S_OK) {
-				artik_list_delete_node(&nodes, (artik_list *)node);
 				security->release(sec_handle);
 				artik_release_api_module(security);
 				log_dbg("Unable to get certificate (err %d)", ret);
-				return ret;
+				goto exit;
 			}
 
-			ret = security->get_key_from_cert(sec_handle, server.clientCertificateOrPskId,
-											&server.privateKey);
+			ret = security->get_key_from_cert(sec_handle, server->clientCertificateOrPskId,
+											&server->privateKey);
 			if (ret != S_OK) {
-				artik_list_delete_node(&nodes, (artik_list *)node);
 				security->release(sec_handle);
 				log_dbg("Unable to get private key");
 				artik_release_api_module(security);
-				return ret;
+				goto exit;
 			}
 
 			node->security_module = security;
 			node->security_handle = sec_handle;
-			server.securityMode = LWM2M_SEC_MODE_CERT;
+			server->securityMode = LWM2M_SEC_MODE_CERT;
 		} else if (!config->ssl_config->client_cert.data && !config->ssl_config->client_cert.len
 				   && !config->ssl_config->client_key.data && !config->ssl_config->client_key.len) {
-			if (!config->tls_psk_identity)
-				return E_BAD_ARGS;
+			if (!config->tls_psk_identity) {
+				ret = E_BAD_ARGS;
+				goto exit;
+			}
 
-			server.clientCertificateOrPskId = strdup(config->tls_psk_identity);
+			server->clientCertificateOrPskId = strdup(config->tls_psk_identity);
 			log_dbg("Copy PSK parameters (%s/%s)", config->tls_psk_identity,
 					config->tls_psk_key);
 		} else {
-			return E_BAD_ARGS;
+			ret = E_BAD_ARGS;
+			goto exit;
 		}
 
-		server.token = strdup(config->tls_psk_key);
+		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN);
 
 		if (config->ssl_config->ca_cert.data)
-			server.serverCertificate = strdup(config->ssl_config->ca_cert.data);
+			server->serverCertificate = strdup(config->ssl_config->ca_cert.data);
 
 	} else if (config->tls_psk_identity && config->tls_psk_key) {
-		server.clientCertificateOrPskId = strdup(config->tls_psk_identity);
-		server.token = strdup(config->tls_psk_key);
+		server->clientCertificateOrPskId = strdup(config->tls_psk_identity);
+		strncpy(server->token, config->tls_psk_key, LWM2M_MAX_STR_LEN);
 		log_dbg("Copy PSK parameters (%s/%s)", config->tls_psk_identity,
 							config->tls_psk_key);
 	}
-	server.lifetime = config->lifetime;
-	server.serverId = config->server_id;
+	server->lifetime = config->lifetime;
+	server->serverId = config->server_id;
 
-	memset(&objects, 0, sizeof(objects));
-	objects.server = &server;
+	objects->server = server;
 
 	/* Copy objects if they have been provided */
+		/* Copy objects if they have been provided */
 	for (i = 0; i < ARTIK_LWM2M_OBJECT_COUNT; i++) {
-		if (config->objects[i] && config->objects[i]->content) {
-			switch (config->objects[i]->type) {
-			case ARTIK_LWM2M_OBJECT_DEVICE:
-				objects.device = (object_device_t *)
-						config->objects[i]->content;
-				break;
-			case ARTIK_LWM2M_OBJECT_CONNECTIVITY_MONITORING:
-				objects.monitoring =
-					(object_conn_monitoring_t *)
-					config->objects[i]->content;
-				break;
-			case ARTIK_LWM2M_OBJECT_FIRMWARE:
-				objects.firmware = (object_firmware_t *)
-					config->objects[i]->content;
-				break;
-			default:
-				log_err("Unknown object");
-				break;
+		if (!config->objects[i])
+			continue;
+
+		if (!config->objects[i]->content)
+			continue;
+
+		switch (config->objects[i]->type) {
+		case ARTIK_LWM2M_OBJECT_DEVICE:
+			objects->device = malloc(sizeof(object_device_t));
+			if (!objects->device) {
+				ret = E_NO_MEM;
+				goto exit;
 			}
+			memcpy(objects->device, config->objects[i]->content, sizeof(object_device_t));
+			break;
+		case ARTIK_LWM2M_OBJECT_CONNECTIVITY_MONITORING:
+			objects->monitoring = malloc(sizeof(object_conn_monitoring_t));
+			if (!objects->monitoring) {
+				ret = E_NO_MEM;
+				goto exit;
+			}
+			memcpy(objects->monitoring, config->objects[i]->content, sizeof(object_conn_monitoring_t));
+			break;
+		case ARTIK_LWM2M_OBJECT_FIRMWARE:
+			objects->firmware = malloc(sizeof(object_firmware_t));
+			if (!objects->firmware) {
+				ret = E_NO_MEM;
+				goto exit;
+			}
+			memcpy(objects->firmware, config->objects[i]->content, sizeof(object_firmware_t));
+			break;
+		default:
+			log_err("Unknown object");
+			break;
 		}
 	}
 
-	/* Configure and start the client */
-	node->client = lwm2m_client_start(&objects, server.serverCertificate);
-	if (!node->client) {
-		log_dbg("lwm2m_client error");
-		if (security && sec_handle) {
-			security->release(sec_handle);
-			artik_release_api_module(security);
+	node->container = objects;
+	*handle = (artik_lwm2m_handle)node;
+
+	return S_OK;
+exit:
+	artik_list_delete_node(&nodes, (artik_list *)node);
+	if (server) {
+		if (server->serverCertificate)
+			free(server->serverCertificate);
+
+		if (server->clientCertificateOrPskId)
+			free(server->clientCertificateOrPskId);
+
+		if (server->privateKey)
+			free(server->privateKey);
+
+		free(server);
+	}
+
+	if (objects) {
+		if (objects->device)
+			free(objects->device);
+
+		if (objects->firmware)
+			free(objects->firmware);
+
+		if (objects->monitoring)
+			free(objects->monitoring);
+
+		free(objects);
+	}
+
+	return ret;
+}
+
+artik_error os_lwm2m_client_release(artik_lwm2m_handle handle)
+{
+	lwm2m_node *node = (lwm2m_node *)artik_list_get_by_handle(nodes,
+						(ARTIK_LIST_HANDLE) handle);
+
+	log_dbg("");
+
+	if (!node)
+		return E_BAD_ARGS;
+
+	if (node->container) {
+		if (node->container->server) {
+			if (node->container->server->serverCertificate)
+				free(node->container->server->serverCertificate);
+
+			if (node->container->server->clientCertificateOrPskId)
+				free(node->container->server->clientCertificateOrPskId);
+
+			if (node->container->server->privateKey)
+				free(node->container->server->privateKey);
+
+			free(node->container->server);
 		}
 
-		artik_list_delete_node(&nodes, (artik_list *)node);
+		if (node->container->device)
+			free(node->container->device);
+
+		if (node->container->firmware)
+			free(node->container->firmware);
+
+		if (node->container->monitoring)
+			free(node->container->monitoring);
+
+		free(node->container);
+	}
+
+	if (node->security_module) {
+		node->security_module->release(node->security_handle);
+		artik_release_api_module(node->security_module);
+	}
+
+	artik_release_api_module(node->loop_module);
+	artik_list_delete_node(&nodes, (artik_list *)node);
+	return S_OK;
+}
+
+artik_error os_lwm2m_client_connect(artik_lwm2m_handle handle)
+{
+	lwm2m_node *node = (lwm2m_node *)artik_list_get_by_handle(nodes, (ARTIK_LIST_HANDLE) handle);
+	artik_error ret = S_OK;
+
+	log_dbg("");
+
+	if (!node)
+		return E_BAD_ARGS;
+
+	/* Configure and start the client */
+	node->client = lwm2m_client_start(node->container, node->container->server->serverCertificate, false);
+	if (!node->client) {
+		log_dbg("lwm2m_client error");
 		return E_LWM2M_ERROR;
 	}
 
@@ -343,12 +447,23 @@ artik_error os_lwm2m_client_connect(artik_lwm2m_handle *handle,
 	if (ret != S_OK) {
 		log_err("Failed to start timeout callback for LWM2M servicing");
 		os_lwm2m_client_disconnect(node);
-		goto exit;
+		return ret;
 	}
 
-	*handle = (artik_lwm2m_handle)node;
+	lwm2m_register_callback(node->client, LWM2M_EXE_FACTORY_RESET,
+							on_exec_factory_reset,
+							(void *)node);
+	lwm2m_register_callback(node->client, LWM2M_EXE_DEVICE_REBOOT,
+							on_exec_device_reboot,
+							(void *)node);
+	lwm2m_register_callback(node->client, LWM2M_EXE_FIRMWARE_UPDATE,
+							on_exec_firmware_update,
+							(void *)node);
+	lwm2m_register_callback(node->client,
+							LWM2M_NOTIFY_RESOURCE_CHANGED,
+							on_resource_changed,
+							(void *)node);
 
-exit:
 	return ret;
 }
 
@@ -362,15 +477,11 @@ artik_error os_lwm2m_client_disconnect(artik_lwm2m_handle handle)
 	if (!node)
 		return E_BAD_ARGS;
 
+	if (!node->client)
+		return E_NOT_CONNECTED;
+
 	lwm2m_client_stop(node->client);
-
-	if (node->security_module && node->security_handle) {
-		node->security_module->release(node->security_handle);
-		artik_release_api_module(node->security_module);
-	}
-
-	artik_release_api_module(node->loop_module);
-	artik_list_delete_node(&nodes, (artik_list *)node);
+	node->loop_module->remove_timeout_callback(node->service_cbk_id);
 
 	return S_OK;
 }
@@ -387,6 +498,9 @@ artik_error os_lwm2m_client_write_resource(artik_lwm2m_handle handle,
 
 	if (!node || !uri)
 		return E_BAD_ARGS;
+
+	if (!node->client)
+		return E_NOT_CONNECTED;
 
 	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN);
 	res.length = length;
@@ -414,6 +528,9 @@ artik_error os_lwm2m_client_read_resource(artik_lwm2m_handle handle,
 
 	if (!node || !uri || !buffer || (*length == 0))
 		return E_BAD_ARGS;
+
+	if (!node->client)
+		return E_NOT_CONNECTED;
 
 	memset(&res, 0, sizeof(res));
 	strncpy(res.uri, uri, LWM2M_MAX_URI_LEN);
@@ -454,24 +571,6 @@ artik_error os_lwm2m_set_callback(artik_lwm2m_handle handle,
 	node->callbacks[event] = user_callback;
 	node->callbacks_params[event] = user_data;
 
-	/* Set corresponding callback from the wakaama layer */
-	if (event == ARTIK_LWM2M_EVENT_RESOURCE_EXECUTE) {
-		lwm2m_register_callback(node->client, LWM2M_EXE_FACTORY_RESET,
-				on_exec_factory_reset,
-				(void *)node);
-		lwm2m_register_callback(node->client, LWM2M_EXE_DEVICE_REBOOT,
-				on_exec_device_reboot,
-				(void *)node);
-		lwm2m_register_callback(node->client, LWM2M_EXE_FIRMWARE_UPDATE,
-				on_exec_firmware_update,
-				(void *)node);
-	} else if (ARTIK_LWM2M_EVENT_RESOURCE_CHANGED) {
-		lwm2m_register_callback(node->client,
-				LWM2M_NOTIFY_RESOURCE_CHANGED,
-				on_resource_changed,
-				(void *)node);
-	}
-
 	return S_OK;
 }
 
@@ -488,18 +587,6 @@ artik_error os_lwm2m_unset_callback(artik_lwm2m_handle handle,
 
 	node->callbacks[event] = NULL;
 	node->callbacks_params[event] = NULL;
-
-	/* Unset corresponding wakaama callback if needed */
-	if (event == ARTIK_LWM2M_EVENT_RESOURCE_EXECUTE) {
-		lwm2m_unregister_callback(node->client,
-						LWM2M_EXE_FACTORY_RESET);
-		lwm2m_unregister_callback(node->client,
-						LWM2M_EXE_DEVICE_REBOOT);
-		lwm2m_unregister_callback(node->client,
-						LWM2M_EXE_FIRMWARE_UPDATE);
-	} else if (ARTIK_LWM2M_EVENT_RESOURCE_CHANGED)
-		lwm2m_unregister_callback(node->client,
-						LWM2M_NOTIFY_RESOURCE_CHANGED);
 
 	return S_OK;
 }

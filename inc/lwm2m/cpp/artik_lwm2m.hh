@@ -45,7 +45,9 @@ class Lwm2m {
  public:
   Lwm2m();
   ~Lwm2m();
-  artik_error client_connect(artik_lwm2m_config *params);
+  artik_error client_request(artik_lwm2m_config *params);
+  artik_error client_release();
+  artik_error client_connect();
   artik_error client_disconnect();
   artik_error client_write_resource(const char *uri, unsigned char *buffer,
       int length);

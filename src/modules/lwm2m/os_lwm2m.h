@@ -21,8 +21,11 @@
 
 #include <artik_error.h>
 
-artik_error os_lwm2m_client_connect(artik_lwm2m_handle * handle,
-	artik_lwm2m_config * config);
+artik_error os_lwm2m_client_request(artik_lwm2m_handle *handle, artik_lwm2m_config *config);
+
+artik_error os_lwm2m_client_release(artik_lwm2m_handle handle);
+
+artik_error os_lwm2m_client_connect(artik_lwm2m_handle handle);
 
 artik_error os_lwm2m_client_disconnect(artik_lwm2m_handle handle);
 

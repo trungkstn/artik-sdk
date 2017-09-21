@@ -234,15 +234,32 @@ typedef struct {
  */
 typedef struct {
 	/*!
-	 * \brief Create an LWM2M client and connect it to the server
+	 * \brief Create an LWM2M client instance
 	 *
-	 * \param[in] handle Pointer of a handle variable
-	 * \param[in] params Pointer of a structure configuring client
+	 * \param[out] handle Handle tied to the created LWM2M client instance
+	 * \param[in] config Configuration to apply to the created LWM2M client instance.
+	 *
+	 * \return S_OK on succes, error code otherwise
+	 */
+	artik_error(*client_request)(artik_lwm2m_handle * handle, artik_lwm2m_config * config);
+	/*!
+	 * \brief Release an LWM2M client instance
+	 *
+	 * \param[in] handle Handle tied to the LWM2M client instance.
+	 *                   This handle is returned by \ref client_request
+	 *
+	 * \return S_OK on succes, error code otherwise
+	 */
+	artik_error(*client_release)(artik_lwm2m_handle handle);
+	/*!
+	 * \brief Connect an LWM2M client instance to the LWM2M server
+	 *
+	 * \param[in] handle Handle tied to the LWM2M client instance.
+	 *                   This handle is returned by \ref client_request.
 	 *
 	 * \return S_OK on success, error code otherwise
 	 */
-	artik_error(*client_connect)(artik_lwm2m_handle * handle,
-					artik_lwm2m_config * config);
+	artik_error(*client_connect)(artik_lwm2m_handle handle);
 	/*!
 	 * \brief Disconnect from the LWM2M server
 	 *

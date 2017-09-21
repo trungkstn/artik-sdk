@@ -21,8 +21,9 @@
 #include <artik_lwm2m.h>
 #include "os_lwm2m.h"
 
-static artik_error client_connect(artik_lwm2m_handle * handle,
-				artik_lwm2m_config * config);
+static artik_error client_request(artik_lwm2m_handle *handle, artik_lwm2m_config *config);
+static artik_error client_release(artik_lwm2m_handle handle);
+static artik_error client_connect(artik_lwm2m_handle handle);
 static artik_error client_disconnect(artik_lwm2m_handle handle);
 static artik_error client_write_resource(artik_lwm2m_handle handle,
 		const char *uri, unsigned char *buffer, int length);
@@ -54,6 +55,8 @@ static artik_error serialize_tlv_string(char **data, int size,
 		unsigned char **buffer, int *lenbuffer);
 
 const artik_lwm2m_module lwm2m_module = {
+	client_request,
+	client_release,
 	client_connect,
 	client_disconnect,
 	client_write_resource,
@@ -68,10 +71,19 @@ const artik_lwm2m_module lwm2m_module = {
 	serialize_tlv_string
 };
 
-artik_error client_connect(artik_lwm2m_handle *handle,
-			artik_lwm2m_config *config)
+static artik_error client_request(artik_lwm2m_handle *handle, artik_lwm2m_config *config)
 {
-	return os_lwm2m_client_connect(handle, config);
+	return os_lwm2m_client_request(handle, config);
+}
+
+static artik_error client_release(artik_lwm2m_handle handle)
+{
+	return os_lwm2m_client_release(handle);
+}
+
+artik_error client_connect(artik_lwm2m_handle handle)
+{
+	return os_lwm2m_client_connect(handle);
 }
 
 artik_error client_disconnect(artik_lwm2m_handle handle)
