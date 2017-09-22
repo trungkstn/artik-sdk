@@ -14,5 +14,6 @@ git archive -o update.tgz HEAD
 mv update.tgz $BUILD_DIR/package/src/
 cd $BUILD_DIR/package/src/
 tar -xvf update.tgz
+rm -f update.tgz
 JOBS=$(nproc)
 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -j$JOBS -d -uc -us -a $TARGET_ARCH --target-arch $TARGET_ARCH
