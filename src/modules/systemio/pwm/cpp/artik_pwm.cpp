@@ -80,7 +80,10 @@ artik_error artik::Pwm::request(void) {
 }
 
 artik_error artik::Pwm::release(void) {
-  return this->m_module->release(this->m_handle);
+  artik_error ret = this->m_module->release(this->m_handle);
+  if (ret == S_OK)
+    this->m_handle = NULL;
+  return ret;
 }
 
 artik_error artik::Pwm::enable(void) {
@@ -92,26 +95,44 @@ artik_error artik::Pwm::disable(void) {
 }
 
 artik_error artik::Pwm::set_period(unsigned int val) {
-  artik_error ret;
-  ret = this->m_module->set_period(this->m_handle, val);
-  if (ret == S_OK)
-    this->m_config.period = val;
+  artik_error ret = S_OK;
+
+  if (this->m_handle) {
+    ret = this->m_module->set_period(this->m_handle, val);
+    if (ret != S_OK)
+      return ret;
+  }
+
+  this->m_config.period = val;
+
   return ret;
 }
 
 artik_error artik::Pwm::set_polarity(artik_pwm_polarity_t val) {
-  artik_error ret;
-  ret = this->m_module->set_polarity(this->m_handle, val);
-  if (ret == S_OK)
-    this->m_config.polarity = val;
+  artik_error ret = S_OK;
+
+  if (this->m_handle) {
+    ret = this->m_module->set_polarity(this->m_handle, val);
+    if (ret != S_OK)
+      return ret;
+  }
+
+  this->m_config.polarity = val;
+
   return ret;
 }
 
 artik_error artik::Pwm::set_duty_cycle(unsigned int val) {
-  artik_error ret;
-  ret = this->m_module->set_duty_cycle(this->m_handle, val);
-  if (ret == S_OK)
-    this->m_config.duty_cycle = val;
+  artik_error ret = S_OK;
+
+  if (this->m_handle) {
+    ret = this->m_module->set_duty_cycle(this->m_handle, val);
+    if (ret != S_OK)
+      return ret;
+  }
+
+  this->m_config.duty_cycle = val;
+
   return ret;
 }
 
