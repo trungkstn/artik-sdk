@@ -31,6 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include <artik_module.h>
 #include <artik_loop.h>
@@ -61,6 +62,68 @@ static void _alarm_callback_2(void *user_data)
 }
 
 typedef void (*t_ptr_func) (int);
+
+static artik_error test_convert_timestamp_to_time(void)
+{
+	artik_error ret = S_OK;
+	artik_time date;
+
+	int64_t timestamp = (int64_t)time(0);
+
+	fprintf(stdout, "TEST: %s started\n", __func__);
+
+	fprintf(stdout, "Timestamp: %10" PRId64 " s\n", timestamp);
+
+	ret = time_module_p->convert_timestamp_to_time(timestamp, &date);
+	if (ret != S_OK) {
+		fprintf(stderr, "TEST: %s failed: ERROR(%d)\n", __func__,
+			ret);
+		return ret;
+	}
+
+	fprintf(stdout, "Date obtained is: %d/%d/%d %d:%d:%d\n", date.month, date.day,
+							date.year, date.hour,
+							date.minute,
+							date.second);
+
+	fprintf(stdout, "TEST: %s finished\n", __func__);
+
+	return ret;
+}
+
+static artik_error test_convert_time_to_timestamp(void)
+{
+	artik_error ret = S_OK;
+	artik_time date;
+	int64_t timestamp;
+
+	fprintf(stdout, "TEST: %s started\n", __func__);
+
+	date.month = 9;
+	date.day = 25;
+	date.year = 2017;
+	date.hour = 12;
+	date.minute = 58;
+	date.second = 44;
+
+	fprintf(stdout, "Date: %d/%d/%d %d:%d:%d\n", date.month, date.day,
+							date.year, date.hour,
+							date.minute,
+							date.second);
+
+	ret = time_module_p->convert_time_to_timestamp(&date, &timestamp);
+	if (ret != S_OK) {
+		fprintf(stderr, "TEST: %s failed: ERROR(%d)\n", __func__,
+			ret);
+		return ret;
+	}
+
+	fprintf(stdout, "Timestamp obtained is: %10" PRId64 " s\n", timestamp);
+
+	fprintf(stdout, "TEST: %s finished\n", __func__);
+
+	return ret;
+}
 
 static artik_error test_time_loopback(void)
 {
@@ -178,6 +241,14 @@ int main(void)
 	artik_error ret = S_OK;
 
 	time_module_p = (artik_time_module *)artik_request_api_module("time");
+
+	ret = test_convert_timestamp_to_time();
+	if (ret != S_OK)
+		goto exit;
+
+	ret = test_convert_time_to_timestamp();
+	if (ret != S_OK)
+		goto exit;
 
 	ret = test_time_loopback();
 	if (ret != S_OK)

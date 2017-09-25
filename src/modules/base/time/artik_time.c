@@ -25,7 +25,8 @@
 static artik_error artik_time_set_time(artik_time date, artik_time_zone gmt);
 static artik_error artik_time_get_time(artik_time_zone gmt, artik_time *date);
 static artik_error artik_time_get_time_str(char *date_str, int size,
-				char *const format, artik_time_zone gmt);
+					   char *const format,
+					   artik_time_zone gmt);
 static artik_msecond artik_time_get_tick(void);
 static artik_error artik_time_create_alarm_second(artik_time_zone gmt,
 						  artik_msecond sec,
@@ -42,7 +43,13 @@ static artik_error artik_time_get_delay_alarm(artik_alarm_handle handle,
 					      artik_msecond *msecond);
 static artik_error artik_time_sync_ntp(const char *hostname);
 static int artik_time_compare_dates(const artik_time *date1,
-		const artik_time *date2);
+				    const artik_time *date2);
+static artik_error artik_time_convert_timestamp_to_time(const int64_t timestamp,
+							artik_time *date);
+static artik_error artik_time_convert_time_to_timestamp(const artik_time
+							*date,
+							int64_t *timestamp);
+
 
 EXPORT_API artik_time_module time_module = {
 	artik_time_set_time,
@@ -54,7 +61,9 @@ EXPORT_API artik_time_module time_module = {
 	artik_time_delete_alarm,
 	artik_time_get_delay_alarm,
 	artik_time_sync_ntp,
-	artik_time_compare_dates
+	artik_time_compare_dates,
+	artik_time_convert_timestamp_to_time,
+	artik_time_convert_time_to_timestamp
 };
 
 static artik_error artik_time_set_time(artik_time date, artik_time_zone gmt)
@@ -163,3 +172,20 @@ int artik_time_compare_dates(const artik_time *date1, const artik_time *date2)
 	return 0;
 }
 
+static artik_error artik_time_convert_timestamp_to_time(const int64_t timestamp,
+							artik_time *date)
+{
+	if (!date)
+		return E_BAD_ARGS;
+
+	return os_time_convert_timestamp_to_time(timestamp, date);
+}
+
+static artik_error artik_time_convert_time_to_timestamp(const artik_time *date,
+							int64_t *timestamp)
+{
+	if (!date | !timestamp)
+		return E_BAD_ARGS;
+
+	return os_time_convert_time_to_timestamp(date, timestamp);
+}

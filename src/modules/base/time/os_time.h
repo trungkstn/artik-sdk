@@ -41,5 +41,9 @@ artik_error os_time_delete_alarm(artik_alarm_handle handle);
 artik_error os_time_get_delay_alarm(artik_alarm_handle handle,
 				    artik_msecond *msecond);
 artik_error os_time_sync_ntp(const char *hostname);
+artik_error os_time_convert_timestamp_to_time(const int64_t timestamp,
+					      artik_time *date);
+artik_error os_time_convert_time_to_timestamp(const artik_time *date,
+					      int64_t *timestamp);
 
 #endif  /* __OS_TIME_H__ */

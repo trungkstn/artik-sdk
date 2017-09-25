@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 #include "artik_error.h"
 #include "artik_types.h"
 
@@ -187,7 +189,7 @@ extern "C" {
 		 *          'format' is/are not well defined,
 		 *          error code otherwise
 		 */
-		 artik_error(*get_time_str) (char *date_str, int size,
+		artik_error(*get_time_str) (char *date_str, int size,
 				char *const format, artik_time_zone gmt);
 		/*!
 		 *  \brief Get system tick
@@ -195,7 +197,7 @@ extern "C" {
 		 *  \return Number of milliseconds corresponding to the
 		 *          system tick
 		 */
-		 artik_msecond(*get_tick) (void);
+		artik_msecond(*get_tick) (void);
 		/*!
 		 *  \brief Create an alarm to set off after an amount of
 		 *         time elapsed from now.
@@ -212,7 +214,7 @@ extern "C" {
 		 *
 		 *  \return S_OK on success, error code otherwise
 		 */
-		 artik_error(*create_alarm_second) (artik_time_zone gmt,
+		artik_error(*create_alarm_second) (artik_time_zone gmt,
 						    artik_msecond value,
 						    artik_alarm_handle * handle,
 						    alarm_callback func,
@@ -231,7 +233,7 @@ extern "C" {
 		 *
 		 *  \return S_OK on success, error code otherwise
 		 */
-		 artik_error(*create_alarm_date) (artik_time_zone gmt,
+		artik_error(*create_alarm_date) (artik_time_zone gmt,
 						  artik_time value,
 						  artik_alarm_handle * handle,
 						  alarm_callback func,
@@ -245,7 +247,7 @@ extern "C" {
 		 *  \return S_OK on success, error code otherwise
 		 */
 
-		 artik_error(*delete_alarm) (artik_alarm_handle handle);
+		artik_error(*delete_alarm) (artik_alarm_handle handle);
 		/*!
 		 *  \brief Get the amount of remaining seconds before an alarm
 		 *         is triggered
@@ -256,7 +258,7 @@ extern "C" {
 		 *
 		 *  \return S_OK on success, error code otherwise
 		 */
-		 artik_error(*get_delay_alarm) (artik_alarm_handle handle,
+		artik_error(*get_delay_alarm) (artik_alarm_handle handle,
 						artik_msecond * msecond);
 		/*!
 		 *  \brief Synchronize system date with remote NTP server
@@ -265,8 +267,8 @@ extern "C" {
 		 *
 		 *  \return S_OK on success, error code otherwise
 		 */
-		 artik_error(*sync_ntp) (const char *hostname);
-		/*
+		artik_error(*sync_ntp) (const char *hostname);
+		/*!
 		 * \brief Compare two dates
 		 *
 		 * \param[in] date1 First date to compare
@@ -277,7 +279,33 @@ extern "C" {
 		 *         1 if date1 occurs after date2
 		 *         -2 if the parameters are invalid
 		 */
-		 int (*compare_dates)(const artik_time *date1, const artik_time *date2);
+		int (*compare_dates)(const artik_time *date1, const artik_time *date2);
+		/*!
+		 *  \brief Convert UNIX timestamp (seconds elapsed since Jan 01
+		 *         1970 UTC) into time.
+		 *
+		 *  \param[in] timestamp The timestamp to convert from
+		 *  \param[out] date Result of the conversion into date.
+		 *
+		 *  \return S_OK on success, error code otherwise
+		 */
+		artik_error(*convert_timestamp_to_time) (const int64_t
+							 timestamp,
+							 artik_time *date);
+		/*!
+		 *  \brief Convert time into UNIX timestamp (seconds
+		 *         elapsed since Jan 01 1970 UTC).
+		 *
+		 *  \param[in] date The date to convert from
+		 *  \param[out] timestamp Result of the conversion into
+		 *              timestamp.
+		 *
+		 *  \return S_OK on success, error code otherwise
+		 */
+		artik_error(*convert_time_to_timestamp) (const artik_time *date,
+							 int64_t *timestamp);
+
+
 
 	} artik_time_module;
 

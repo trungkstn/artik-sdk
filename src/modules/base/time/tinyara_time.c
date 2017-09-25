@@ -239,3 +239,53 @@ artik_error os_time_sync_ntp(const char *hostname)
 {
 	return E_NOT_SUPPORTED;
 }
+
+artik_error os_time_convert_timestamp_to_time(const int64_t timestamp,
+					  artik_time *date)
+{
+	struct tm *rtime = NULL;
+
+	memset(date, 0, sizeof(*date));
+
+	rtime = gmtime((time_t *)&timestamp);
+
+	if (!rtime)
+		return E_INVALID_VALUE;
+
+	rtime->tm_mon++;
+	rtime->tm_year += EPOCH_DEF;
+
+	date->second = (unsigned int)rtime->tm_sec;
+	date->minute = (unsigned int)rtime->tm_min;
+	date->hour = (unsigned int)rtime->tm_hour;
+	date->day = (unsigned int)rtime->tm_mday;
+	date->month = (unsigned int)rtime->tm_mon;
+	date->year = (unsigned int)rtime->tm_year;
+
+	return S_OK;
+}
+
+artik_error os_time_convert_time_to_timestamp(const artik_time *date,
+					      int64_t *timestamp)
+{
+	struct tm rtime;
+
+	memset(&rtime, 0, sizeof(rtime));
+
+	rtime.tm_sec = (int)date->second;
+	rtime.tm_min = (int)date->minute;
+	rtime.tm_hour = (int)date->hour;
+	rtime.tm_mday = (int)date->day;
+	rtime.tm_mon = (int)date->month;
+	rtime.tm_year = (int)date->year;
+
+	rtime.tm_year -= EPOCH_DEF;
+	rtime.tm_mon--;
+
+	*timestamp = (int64_t)mktime(&rtime);
+
+	if (*timestamp < 0)
+		return E_INVALID_VALUE;
+
+	return S_OK;
+}

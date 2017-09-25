@@ -81,6 +81,8 @@ class Time {
       void *);
   Alarm *create_alarm_date(artik_time_zone, artik_time, alarm_callback, void *);
   int compare_dates(const artik_time *date1, const artik_time *date2);
+  artik_error convert_timestamp_to_time(const int64_t, artik_time*);
+  artik_error convert_time_to_timestamp(const artik_time*, int64_t*);
 };
 
 }  // namespace artik

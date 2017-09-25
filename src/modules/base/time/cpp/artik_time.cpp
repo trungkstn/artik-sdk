@@ -125,3 +125,13 @@ int artik::Time::compare_dates(const artik_time *date1,
     const artik_time *date2) {
   return this->m_module->compare_dates(date1, date2);
 }
+
+artik_error artik::Time::convert_timestamp_to_time(const int64_t timestamp,
+    artik_time *date) {
+  return this->m_module->convert_timestamp_to_time(timestamp, date);
+}
+
+artik_error artik::Time::convert_time_to_timestamp(const artik_time *date,
+    int64_t *timestamp) {
+  return this->m_module->convert_time_to_timestamp(date, timestamp);
+}
