@@ -60,9 +60,11 @@ static artik_error test_get_network_config(
 	artik_network_module *network = (artik_network_module *)
 					artik_request_api_module("network");
 	artik_error ret;
-	artik_network_config net_config = { 0 };
+	artik_network_config net_config;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
+
+	memset(&net_config, 0, sizeof(net_config));
 
 	ret = network->get_network_config(&net_config, interface);
 	if (ret == S_OK) {
