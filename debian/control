@@ -187,4 +187,22 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 	libartik-sdk-zigbee-dev,
 	libartik-sdk-lwm2m-dev,
 	libartik-sdk-mqtt-dev,
-Description: Meta package for artik-sdk deveopment libraries
+Description: Meta package for artik-sdk development libraries
+
+Package: libartik-sdk-dbg
+Architecture: any-arm arm64
+Section: debug
+Depends:
+	libartik-sdk-base,
+	libartik-sdk-systemio,
+	libartik-sdk-connectivity,
+	libartik-sdk-media,
+	libartik-sdk-bluetooth,
+	libartik-sdk-sensor,
+	libartik-sdk-wifi,
+	libartik-sdk-zigbee,
+	libartik-sdk-lwm2m,
+	libartik-sdk-mqtt,
+	${misc:Depends}
+Description: Debug package containing debugging symbols for the
+  artik-sdk libraries
