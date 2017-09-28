@@ -369,14 +369,14 @@ artik_error os_wifi_connect(const char *ssid, const char *password,
 	if (g_mode != ARTIK_WIFI_MODE_STATION)
 		return E_NOT_INITIALIZED;
 
-	memset(&config, 0, sizeof(config));
-
-	if (password != NULL) {
+	if (password) {
+		memset(&config, 0, sizeof(config));
 		config.secmode = SLSI_SEC_MODE_WPA2_CCMP;
 		memcpy(config.passphrase, password, strlen(password));
 	}
 
-	ret = WiFiNetworkJoin((uint8_t *)ssid, strlen(ssid), NULL, &config);
+	ret = WiFiNetworkJoin((uint8_t *)ssid, strlen(ssid), NULL,
+			password ? &config : NULL);
 	if (ret != SLSI_STATUS_SUCCESS) {
 		switch (ret) {
 		case SLSI_STATUS_PARAM_FAILED:
