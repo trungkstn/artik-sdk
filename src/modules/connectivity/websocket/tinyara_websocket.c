@@ -411,15 +411,6 @@ static artik_error ssl_setup(struct websocket_priv *priv,
 			return ret;
 		}
 
-		err = security->get_root_ca(handle, &root_ca);
-		if (ret != S_OK) {
-			log_err("Failed to get root CA (err=%d)", err);
-			ssl_cleanup(priv);
-			artik_release_api_module(handle);
-			free(dev_cert);
-			return ret;
-		}
-
 		security->release(handle);
 		artik_release_api_module(security);
 
@@ -472,23 +463,6 @@ static artik_error ssl_setup(struct websocket_priv *priv,
 			free(dev_cert);
 			free(root_ca);
 			return E_BAD_ARGS;
-		}
-
-		if (root_ca) {
-			ret = mbedtls_x509_crt_parse(ctx->cert,
-					(const unsigned char *)root_ca,
-					strlen(root_ca) + 1);
-			if (ret) {
-				log_err("Failed to parse root CA cert (err=%d)",
-									ret);
-				ssl_cleanup(priv);
-				free(dev_cert);
-				free(root_ca);
-				return E_BAD_ARGS;
-			}
-
-			mbedtls_ssl_conf_ca_chain(ctx->conf, ctx->cert->next ?
-					ctx->cert->next : ctx->cert, NULL);
 		}
 
 		ssl_config->ca_cert.data = NULL;

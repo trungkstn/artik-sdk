@@ -279,13 +279,6 @@ static artik_error init_client_ssl_config(
 			goto exit;
 		}
 
-		err = security->get_root_ca(handle, &se_root_ca);
-		if (err != S_OK || !se_root_ca) {
-			log_err("Failed to get root ca (err=%d)\n", err);
-			ret = E_ACCESS_DENIED;
-			goto exit;
-		}
-
 		security->release(handle);
 		artik_release_api_module(security);
 
@@ -335,21 +328,6 @@ static artik_error init_client_ssl_config(
 			free(se_root_ca);
 			ret = E_BAD_ARGS;
 			goto exit;
-		}
-
-		if (se_root_ca) {
-			ret = mbedtls_x509_crt_parse(http_ssl_config->cert,
-					(const unsigned char *)se_root_ca,
-					strlen(se_root_ca) + 1);
-			if (ret) {
-				log_err("Failed to parse root CA certificate (err=%d)", ret);
-				free(se_cert);
-				free(se_root_ca);
-				ret = E_BAD_ARGS;
-				goto exit;
-			}
-
-			mbedtls_ssl_conf_ca_chain(http_ssl_config->ssl->tls_conf, http_ssl_config->cert->next, NULL);
 		}
 
 		free(se_cert);
