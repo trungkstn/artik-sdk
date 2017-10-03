@@ -238,8 +238,8 @@ exit:
 	return err;
 }
 
-artik_error os_security_get_root_ca(artik_security_handle handle,
-								char **root_ca)
+artik_error os_security_get_ca_chain(artik_security_handle handle,
+								char **chain)
 {
 	security_node *node = (security_node *)artik_list_get_by_handle(
 				requested_nodes, (ARTIK_LIST_HANDLE)handle);
@@ -247,11 +247,15 @@ artik_error os_security_get_root_ca(artik_security_handle handle,
 	int ret = 0;
 	unsigned char *cert_data = NULL;
 	unsigned int cert_len = SEE_MAX_BUF_SIZE;
+	unsigned int len = 0;
 	unsigned char *pem_data = NULL;
+	unsigned char *intermediate_cert = NULL;
+	unsigned char *p = NULL;
 	size_t pem_len = 4096;
-	int root_ca_len = 0;
+	size_t olen = 0;
+	size_t olen2 = 0;
 
-	if (!node || !root_ca || *root_ca)
+	if (!node || !chain || *chain)
 		return E_BAD_ARGS;
 
 	cert_data = zalloc(cert_len);
@@ -273,19 +277,31 @@ artik_error os_security_get_root_ca(artik_security_handle handle,
 	}
 
 	/* Get the root CA length base on the sequence tag */
-	root_ca_len = (cert_data[2] << 8) + cert_data[3] + 4;
-
+	p = cert_data;
+	mbedtls_asn1_get_tag(&p, cert_data + cert_len, &len, (MBEDTLS_ASN1_CONSTRUCTED|MBEDTLS_ASN1_SEQUENCE));
 	/* Certificate should be in DER format, just export it as PEM */
 	ret = mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, cert_data,
-			root_ca_len, pem_data, pem_len, &pem_len);
+				len + (p - cert_data), pem_data, pem_len, &olen);
 	if (ret) {
 		log_err("Failed to write PEM root CA (err=%d)", ret);
 		err = E_ACCESS_DENIED;
 		goto exit;
 	}
 
-	*root_ca = strndup((char *)pem_data, pem_len);
-	if (*root_ca == NULL) {
+	/* Get the intermediate certificate */
+	p += len;
+	intermediate_cert = p;
+	mbedtls_asn1_get_tag(&p, cert_data + cert_len, &len, (MBEDTLS_ASN1_CONSTRUCTED|MBEDTLS_ASN1_SEQUENCE));
+	ret = mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, intermediate_cert,
+				len + (p - intermediate_cert), pem_data + olen - 1, pem_len - olen + 1, &olen2);
+	if (ret) {
+		log_err("Failed to write PEM intermediate CA (err=%d)", ret);
+		err = E_ACCESS_DENIED;
+		goto exit;
+	}
+
+	*chain = strndup((char *)pem_data, olen - 1 + olen2);
+	if (*chain == NULL) {
 		err = E_NO_MEM;
 		goto exit;
 	}

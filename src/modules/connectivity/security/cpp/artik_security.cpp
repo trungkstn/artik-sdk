@@ -35,6 +35,12 @@ artik_error artik::Security::get_certificate(char **cert) {
   return m_module->get_certificate(m_handle, cert);
 }
 
+artik_error artik::Security::get_ca_chain(char **chain) {
+  if (!m_handle)
+    return E_NOT_INITIALIZED;
+  return m_module->get_ca_chain(m_handle, chain);
+}
+
 artik_error artik::Security::get_key_from_cert(const char *cert, char **key) {
   if (!m_handle)
     return E_NOT_INITIALIZED;

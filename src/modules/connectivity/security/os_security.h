@@ -27,8 +27,8 @@ artik_error os_security_get_certificate(artik_security_handle handle,
 					char **cert);
 artik_error os_security_get_key_from_cert(artik_security_handle handle,
 					const char *cert, char **key);
-artik_error os_security_get_root_ca(artik_security_handle handle,
-					char **root_ca);
+artik_error os_security_get_ca_chain(artik_security_handle handle,
+					char **chain);
 artik_error os_get_random_bytes(artik_security_handle handle,
 					unsigned char *rand, int len);
 artik_error os_get_certificate_sn(artik_security_handle handle,

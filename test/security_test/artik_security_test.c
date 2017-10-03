@@ -75,6 +75,7 @@ static artik_error test_security_get_certificate_and_key(void)
 	artik_security_handle handle;
 	char *cert = NULL;
 	char *key = NULL;
+	char *chain = NULL;
 
 	fprintf(stdout, "TEST: %s starting\n", __func__);
 
@@ -84,6 +85,13 @@ static artik_error test_security_get_certificate_and_key(void)
 									ret);
 		return ret;
 	}
+
+	ret = security->get_ca_chain(handle, &chain);
+	if (ret != S_OK) {
+		fprintf(stderr, "Failed to get ca chain (err=%d)\n", ret);
+		goto exit;
+	}
+	fprintf(stdout, "Chain:\n%s\n", chain);
 
 	ret = security->get_certificate(handle, &cert);
 	if (ret != S_OK) {

@@ -44,6 +44,7 @@ class Security {
   ~Security();
 
   artik_error get_certificate(char **);
+  artik_error get_ca_chain(char **);
   artik_error get_key_from_cert(const char *, char **);
   artik_error get_random_bytes(unsigned char*, int);
   artik_error get_certificate_sn(unsigned char*, unsigned int *);

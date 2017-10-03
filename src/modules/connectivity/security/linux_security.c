@@ -36,9 +36,16 @@
 #define COOKIE_SECURITY       "SEC"
 #define COOKIE_SIGVERIF       "SIG"
 
+enum CertificateType {
+	EndCertificate = 0,
+	CertificateChain = 1
+};
+
 struct cert_params {
 	const char *cert_id;
-	X509 *cert;
+	enum CertificateType certificate_type;
+	int ncerts;
+	X509 * certs[5];
 };
 
 typedef struct {
@@ -285,13 +292,14 @@ artik_error os_security_get_certificate(artik_security_handle handle,
 
 	memset(&params, 0, sizeof(params));
 	params.cert_id = "ARTIK/0";
+	params.certificate_type = EndCertificate;
 
 	/* Get the certificate from the SE */
 	ENGINE_ctrl_cmd(node->engine, "LOAD_CERT_CTRL", 0, &params, NULL, 0);
 
 	/* Convert the X509 cert into a string */
 	b64 = BIO_new(BIO_s_mem());
-	PEM_write_bio_X509(b64, params.cert);
+	PEM_write_bio_X509(b64, params.certs[0]);
 	BIO_write(b64, "\0", 1);
 	BIO_get_mem_ptr(b64, &bptr);
 
@@ -377,10 +385,53 @@ exit:
 	return ret;
 }
 
-artik_error os_security_get_root_ca(artik_security_handle handle,
-					char **root_ca)
+artik_error os_security_get_ca_chain(artik_security_handle handle,
+					char **chain)
 {
-	return E_NOT_SUPPORTED;
+	security_node *node = (security_node *)
+		artik_list_get_by_handle(requested_node,
+						(ARTIK_LIST_HANDLE) handle);
+	struct cert_params params;
+	BIO *b64 = NULL;
+	BUF_MEM *bptr = NULL;
+	int i = 0;
+
+	if (!node || !node->engine || !chain || *chain ||
+			strncmp(node->cookie, COOKIE_SECURITY, sizeof(node->cookie)))
+		return E_BAD_ARGS;
+
+	memset(&params, 0, sizeof(params));
+	params.cert_id = "ARTIK/0";
+	params.certificate_type = CertificateChain;
+
+	/* Get the certificate from the SE */
+	ENGINE_ctrl_cmd(node->engine, "LOAD_CERT_CTRL", 0, &params, NULL, 0);
+
+	if (params.ncerts == 0)
+		return E_SECURITY_ERROR;
+
+	b64 = BIO_new(BIO_s_mem());
+	for (i = 0; i < params.ncerts; i++) {
+		log_dbg("i = %d", i);
+		PEM_write_bio_X509(b64, params.certs[i]);
+	}
+
+	BIO_write(b64, "\0", 1);
+	BIO_get_mem_ptr(b64, &bptr);
+
+	*chain = (char *)malloc(bptr->length);
+	if (!(*chain)) {
+		BIO_free(b64);
+		return E_NO_MEM;
+	}
+
+	BIO_read(b64, (void *)(*chain), bptr->length);
+	BIO_free(b64);
+
+	log_dbg("bptr->length = %d", bptr->length);
+	log_dbg("strlen(chain) = %d", strlen(*chain));
+
+	return S_OK;
 }
 
 artik_error os_get_random_bytes(artik_security_handle handle,

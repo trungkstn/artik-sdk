@@ -129,16 +129,16 @@ typedef struct {
 	 *  \param[in] handle Handle tied to a requested security
 	 *             instance.
 	 *             This handle is returned by the request function.
-	 *  \param[out] root_ca Pointer to a string that will be
+	 *  \param[out] chain Pointer to a string that will be
 	 *              allocated by the function
-	 *              and filled with the content of the CA. This
-	 *              string must
-	 *              be freed by the calling function.
+	 *              and filled with the content of the CA and
+	 *              the intermediate certificate in PEM format.
+	 *              This string must be freed by the calling function.
 	 *
 	 *  \return S_OK on success, error code otherwise
 	 */
-	artik_error(*get_root_ca) (artik_security_handle handle,
-						char **root_ca);
+	artik_error(*get_ca_chain) (artik_security_handle handle,
+						char **chain);
 
 	/*!
 	 *  \brief Generate true random bytes

@@ -25,7 +25,7 @@ static artik_error release(artik_security_handle handle);
 static artik_error get_certificate(artik_security_handle handle, char **cert);
 static artik_error get_key_from_cert(artik_security_handle handle,
 		const char *cert, char **key);
-static artik_error get_root_ca(artik_security_handle handle, char **root_ca);
+static artik_error get_ca_chain(artik_security_handle handle, char **chain);
 static artik_error get_random_bytes(artik_security_handle handle,
 		unsigned char *rand, int len);
 static artik_error get_certificate_sn(artik_security_handle handle,
@@ -42,7 +42,7 @@ const artik_security_module security_module = {
 	release,
 	get_certificate,
 	get_key_from_cert,
-	get_root_ca,
+	get_ca_chain,
 	get_random_bytes,
 	get_certificate_sn,
 	verify_signature_init,
@@ -71,9 +71,9 @@ artik_error get_key_from_cert(artik_security_handle handle, const char *cert,
 	return os_security_get_key_from_cert(handle, cert, key);
 }
 
-artik_error get_root_ca(artik_security_handle handle, char **root_ca)
+artik_error get_ca_chain(artik_security_handle handle, char **chain)
 {
-	return os_security_get_root_ca(handle, root_ca);
+	return os_security_get_ca_chain(handle, chain);
 }
 
 artik_error get_random_bytes(artik_security_handle handle, unsigned char *rand,
