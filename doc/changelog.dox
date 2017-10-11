@@ -3,6 +3,40 @@
  * This page details the changes operated on the SDK API between consecutive
  * releases.
  *
+ * \section one_five_to_one_six Version 1.5 to 1.6
+ *
+ * \subsection one_five_to_one_six_time Time
+ *
+ * Added two functions to convert between EPOCH timestamps and date objects:
+ * - \ref artik_time_module::convert_timestamp_to_time
+ * - \ref artik_time_module::convert_time_to_timestamp
+ *
+ * \subsection one_five_to_one_six_a05x_platform ARTIK05x platform
+ *
+ * Removed GPIO definitions for \b XGPIO0 and \b XGPIO28 which are not
+ * accessible on the ARTIK053 Starter Kit.
+ *
+ * \subsection one_five_to_one_six_cloud Cloud
+ *
+ * Added two functions to set and get one device's server properties:
+ * - \ref artik_cloud_module::get_device_properties
+ * - \ref artik_cloud_module::set_device_server_properties
+ *
+ * \subsection one_five_to_one_six_security Security
+ *
+ * Renamed function \b get_root_ca into \ref artik_security_module::get_ca_chain
+ * This function has also been implemented in the Linux port to return
+ * CA certificates stored in the Secure Element of the ARTIK boards.
+ *
+ * \subsection one_five_to_one_six_lwm2m LWM2M
+ *
+ * Split the \b client_connect function into two separate APIs:
+ * - \ref artik_lwm2m_module::client_request
+ * - \ref artik_lwm2m_module::client_connect
+ *
+ * The first API is used to prepare and configure the LWM2M client, the second
+ * actually initiates the LWM2M connection to the server.
+ *
  * \section one_four_to_one_five Version 1.4 to 1.5
  *
  * \subsection one_four_to_one_five_http HTTP
