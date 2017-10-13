@@ -15,9 +15,6 @@
  *
  * Renamed \b ARTIK053 platform into \b ARTIK05x to accomodate all module variants.
  *
- * Removed GPIO definitions for \b XGPIO0 and \b XGPIO28 which are not
- * accessible on the ARTIK053 Starter Kit.
- *
  * \subsection one_five_to_one_six_cloud Cloud
  *
  * Added two functions to set and get one device's server properties:

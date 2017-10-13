@@ -68,6 +68,7 @@ static const artik_api_module artik_api_a05x_modules[] = {
 };
 
 /* List of available GPIO IDs */
+#define ARTIK_A05x_XGPIO0	29	// GPG0[0]
 #define ARTIK_A05x_XGPIO1	30	// GPG0[1]
 #define ARTIK_A05x_XGPIO2	31	// GPG0[2]
 #define ARTIK_A05x_XGPIO3	32	// GPG0[3]
@@ -95,6 +96,7 @@ static const artik_api_module artik_api_a05x_modules[] = {
 #define ARTIK_A05x_XGPIO25	54	// GPG3[1]
 #define ARTIK_A05x_XGPIO26	55	// GPG3[2]
 #define ARTIK_A05x_XGPIO27	56	// GPG3[3]
+#define ARTIK_A05x_XGPIO28	20	// GPG2[4]
 #define ARTIK_A05x_XEINT0	57	// GPA0[0]
 #define ARTIK_A05x_XEINT1	58	// GPA0[1]
 #define ARTIK_A05x_XEINT2	59	// GPA0[2]
