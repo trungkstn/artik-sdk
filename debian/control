@@ -47,6 +47,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 	libartik-sdk-base,
 	libwebsockets7 (>= 1.7),
 	libcurl3,
+	artiksee (= 0.6),
 Description: Connectivity package containing APIs for communicating over HTTP, websockets, etc...
 
 Package: libartik-sdk-connectivity-dev
