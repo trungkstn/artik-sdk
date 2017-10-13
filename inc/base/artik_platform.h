@@ -50,9 +50,9 @@ enum {
 	 */
 	ARTIK530 = 4,
 	/*!
-	 *  \brief Samsung's ARTIK 053 Development platform
+	 *  \brief Samsung's ARTIK 05x Development platform
 	 */
-	ARTIK053 = 5
+	ARTIK05x = 5
 };
 
 #include "platform/artik_a520_platform.h"
@@ -71,7 +71,7 @@ static const char artik_platform_name[][MAX_PLATFORM_NAME] = {
 	"ARTIK 1020",
 	"ARTIK 710",
 	"ARTIK 530",
-	"ARTIK 053"
+	"ARTIK 05x"
 };
 
 #endif /* INCLUDE_ARTIK_PLATFORM_H_ */

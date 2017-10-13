@@ -13,6 +13,8 @@
  *
  * \subsection one_five_to_one_six_a05x_platform ARTIK05x platform
  *
+ * Renamed \b ARTIK053 platform into \b ARTIK05x to accomodate all module variants.
+ *
  * Removed GPIO definitions for \b XGPIO0 and \b XGPIO28 which are not
  * accessible on the ARTIK053 Starter Kit.
  *

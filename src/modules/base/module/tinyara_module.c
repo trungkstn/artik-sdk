@@ -33,7 +33,7 @@ typedef struct {
 } tinyara_platform;
 
 static const tinyara_platform artik_api_modules[] = {
-	{ ARTIK053, artik_api_a05x_modules },
+	{ ARTIK05x, artik_api_a05x_modules },
 	{ -1,		NULL}
 };
 
@@ -126,8 +126,10 @@ int os_get_platform(void)
 	 * be filled up.
 	 *
 	 */
-#if defined(CONFIG_ARCH_BOARD_ARTIK053) || defined(CONFIG_ARCH_BOARD_ARTIK053S)
-	return ARTIK053;
+#if defined(CONFIG_ARCH_BOARD_ARTIK053)  || \
+    defined(CONFIG_ARCH_BOARD_ARTIK053S) || \
+    defined(CONFIG_ARCH_BOARD_ARTIK055S)
+	return ARTIK05x;
 #else
 	return -1;
 #endif

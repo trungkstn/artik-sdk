@@ -23,7 +23,7 @@ platforms:
  - ARTIK 530 Development platform
  - ARTIK 710 Development platform
  - ARTIK 1020 Development platform
- - ARTIK 053 Development Platform
+ - ARTIK 05x Development Platforms
 
 ## Modules
 
