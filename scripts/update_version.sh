@@ -10,6 +10,8 @@ MINOR=`echo ${VERSION} | cut -d. -f2`
 
 sed -i'' "s/LIB_VERSION_MAJOR [0-9]*/LIB_VERSION_MAJOR ${MAJOR}/" CMakeLists.txt
 sed -i'' "s/LIB_VERSION_MINOR [0-9]*/LIB_VERSION_MINOR ${MINOR}/" CMakeLists.txt
+sed -i'' "s/LIB_VERSION_MAJOR=[0-9]*/LIB_VERSION_MAJOR=${MAJOR}/" Makefile
+sed -i'' "s/LIB_VERSION_MINOR=[0-9]*/LIB_VERSION_MINOR=${MINOR}/" Makefile
 sed -i'' "s/version==*.*/version=${VERSION}/g" pkgconfig/libartik-sdk-base.pc
 sed -i'' "s/version==*.*/version=${VERSION}/g" pkgconfig/libartik-sdk-bluetooth.pc
 sed -i'' "s/version==*.*/version=${VERSION}/g" pkgconfig/libartik-sdk-connectivity.pc
