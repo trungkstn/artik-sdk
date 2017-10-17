@@ -211,16 +211,38 @@ void websocket_print_on_msg_cb(websocket_context_ptr ctx,
 			if (msg)
 				priv->rx_cb(priv->rx_user_data, (void *)msg);
 		}
-	} else if (WEBSOCKET_CHECK_CTRL_CLOSE(arg->opcode)) {
-		log_dbg("MSG: Close\n");
-		if (priv->conn_cb)
-			priv->conn_cb(priv->conn_user_data,
-						(void *)ARTIK_WEBSOCKET_CLOSED);
 	} else if (WEBSOCKET_CHECK_CTRL_PING(arg->opcode)) {
 		log_dbg("MSG: Ping\n");
 	} else if (WEBSOCKET_CHECK_CTRL_PONG(arg->opcode)) {
 		log_dbg("MSG: Pong\n");
 	}
+}
+
+void websocket_on_connectivity_change_callback(websocket_context_ptr ctx,
+		websocket_connection_state state, void *user_data)
+{
+	struct websocket_info_t *info = user_data;
+	struct websocket_priv *priv = (struct websocket_priv *)
+							info->data->user_data;
+
+	if (!priv)
+		return;
+
+	if (!priv->conn_cb)
+		return;
+
+	artik_websocket_connection_state artik_state = ARTIK_WEBSOCKET_CLOSED;
+	switch (state) {
+	case WEBSOCKET_CONNECTED:
+		artik_state = ARTIK_WEBSOCKET_CONNECTED;
+		break;
+	case WEBSOCKET_CLOSED:
+		artik_state = ARTIK_WEBSOCKET_CLOSED;
+		break;
+	}
+
+	priv->conn_cb(priv->conn_user_data,
+				  (void *)artik_state);
 }
 
 static websocket_cb_t callbacks = {
@@ -230,7 +252,8 @@ static websocket_cb_t callbacks = {
 	NULL,				/* recv frame start callback */
 	NULL,				/* recv frame chunk callback */
 	NULL,				/* recv frame end callback */
-	websocket_print_on_msg_cb	/* recv message callback */
+	websocket_print_on_msg_cb,	/* recv message callback */
+	websocket_on_connectivity_change_callback
 };
 
 static void websocket_tls_debug(void *ctx, int level, const char *file,
