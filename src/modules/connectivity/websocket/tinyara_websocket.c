@@ -219,7 +219,7 @@ void websocket_print_on_msg_cb(websocket_context_ptr ctx,
 }
 
 void websocket_on_connectivity_change_callback(websocket_context_ptr ctx,
-		websocket_connection_state state, void *user_data)
+		enum websocket_connection_state state, void *user_data)
 {
 	struct websocket_info_t *info = user_data;
 	struct websocket_priv *priv = (struct websocket_priv *)
@@ -245,7 +245,7 @@ void websocket_on_connectivity_change_callback(websocket_context_ptr ctx,
 				  (void *)artik_state);
 }
 
-static websocket_cb_t callbacks = {
+static struct websocket_cb_t callbacks = {
 	websocket_recv_cb,		/* recv callback */
 	websocket_send_cb,		/* send callback */
 	websocket_genmask_cb,		/* gen mask callback */
