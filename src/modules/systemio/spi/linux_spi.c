@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include <artik_log.h>
 #include <artik_spi.h>
 #include "os_spi.h"
 
@@ -39,36 +40,38 @@ static int spi_setup(int fd, unsigned char mode, unsigned char bits,
 {
 	int ret;
 
+	log_dbg("");
+
 	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup mode\n");
+		log_err("SPI: Could not setup mode");
 		return ret;
 	}
 	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup mode\n");
+		log_err("SPI: Could not setup mode");
 		return ret;
 	}
 
 	ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup bits\n");
+		log_err("SPI: Could not setup bits");
 		return ret;
 	}
 	ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup bits\n");
+		log_err("SPI: Could not setup bits");
 		return ret;
 	}
 
 	ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup speed\n");
+		log_err("SPI: Could not setup speed");
 		return ret;
 	}
 	ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
 	if (ret < 0) {
-		fprintf(stderr, "SPI: Could not setup speed\n");
+		log_err("SPI: Could not setup speed");
 		return ret;
 	}
 
@@ -81,6 +84,8 @@ artik_error os_spi_request(artik_spi_config *config)
 	char devname[SPI_DEV_MAX_LEN];
 	artik_error ret = S_OK;
 
+	log_dbg("");
+
 	if (!config)
 		return E_BAD_ARGS;
 	else if (config && config->mode == SPI_MODE_INVALID)
@@ -92,14 +97,14 @@ artik_error os_spi_request(artik_spi_config *config)
 
 	fd = open(devname, O_SYNC | O_WRONLY);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s (%d)\n", devname, errno);
+		log_err("Failed to open %s (%d)", devname, errno);
 		return E_ACCESS_DENIED;
 	}
 
 	ret = spi_setup(fd, config->mode, config->bits_per_word,
 			config->max_speed);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to write spi setup %s(%d)\n",
+		log_err("Failed to write spi setup %s(%d)",
 			devname, errno);
 		ret = E_ACCESS_DENIED;
 	}
@@ -111,6 +116,8 @@ artik_error os_spi_request(artik_spi_config *config)
 
 artik_error os_spi_release(artik_spi_config *config)
 {
+	log_dbg("");
+
 	/* Nothing to do here */
 	return S_OK;
 }
@@ -120,6 +127,8 @@ artik_error os_spi_read(artik_spi_config *config, char *buf, int len)
 	int fd = -1;
 	char devname[SPI_DEV_MAX_LEN];
 	artik_error ret = S_OK;
+
+	log_dbg("");
 
 	if (!config)
 		return E_BAD_ARGS;
@@ -137,12 +146,12 @@ artik_error os_spi_read(artik_spi_config *config, char *buf, int len)
 
 	fd = open(devname, O_RDWR);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s (%d)\n", devname, errno);
+		log_err("Failed to open %s (%d)", devname, errno);
 		return E_ACCESS_DENIED;
 	}
 
 	if (read(fd, buf, len) != len) {
-		fprintf(stderr, "%s: Failed to read (%d)\n", devname, errno);
+		log_err("%s: Failed to read (%d)", devname, errno);
 		ret = E_ACCESS_DENIED;
 		goto exit;
 	}
@@ -159,6 +168,8 @@ artik_error os_spi_write(artik_spi_config *config, char *buf, int len)
 	char devname[SPI_DEV_MAX_LEN];
 	artik_error ret = S_OK;
 	struct spi_ioc_transfer data;
+
+	log_dbg("");
 
 	if (!config)
 		return E_BAD_ARGS;
@@ -178,7 +189,7 @@ artik_error os_spi_write(artik_spi_config *config, char *buf, int len)
 
 	fd = open(devname, O_SYNC | O_WRONLY);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s (%d)\n", devname, errno);
+		log_err("Failed to open %s (%d)", devname, errno);
 		return E_ACCESS_DENIED;
 	}
 
@@ -188,7 +199,7 @@ artik_error os_spi_write(artik_spi_config *config, char *buf, int len)
 
 
 	if (ioctl(fd, SPI_IOC_MESSAGE(1), &data) < 0) {
-		fprintf(stderr, "%s: Failed to write (%d)\n", devname, errno);
+		log_err("%s: Failed to write (%d)", devname, errno);
 		ret = E_ACCESS_DENIED;
 		goto exit;
 	}
@@ -205,8 +216,9 @@ artik_error os_spi_read_write(artik_spi_config *config, char *tx_buf,
 	int fd = -1;
 	char devname[SPI_DEV_MAX_LEN];
 	artik_error ret = S_OK;
-
 	struct spi_ioc_transfer data;
+
+	log_err("");
 
 	if (!config)
 		return E_BAD_ARGS;
@@ -224,7 +236,7 @@ artik_error os_spi_read_write(artik_spi_config *config, char *tx_buf,
 
 	fd = open(devname, O_SYNC | O_WRONLY);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s (%d)\n", devname, errno);
+		log_err("Failed to open %s (%d)", devname, errno);
 		return E_ACCESS_DENIED;
 	}
 	memset(&data, 0, sizeof(data));
@@ -233,8 +245,7 @@ artik_error os_spi_read_write(artik_spi_config *config, char *tx_buf,
 	data.rx_buf = (unsigned long)rx_buf;
 	data.len    = len;
 	if (ioctl(fd, SPI_IOC_MESSAGE(1), &data) < 0) {
-		fprintf(stderr,
-		"%s: Failed to read/write operation at address 0x%04x (%d)\n",
+		log_err("%s: Failed to read/write operation at address 0x%04x (%d)",
 			devname, tx_buf[0], errno);
 		ret = E_ACCESS_DENIED;
 		goto exit;
