@@ -161,14 +161,15 @@ static void wifi_save_scan_results(void)
 
 		if (scan_results->sec_modes->secmode == SLSI_SEC_MODE_OPEN)
 			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_OPEN;
-		else if (scan_results->sec_modes->secmode ==
-						SLSI_SEC_MODE_WPA2_CCMP)
+		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_WPA2_MIXED)
 			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA2;
-		else if (scan_results->sec_modes->secmode ==
-						SLSI_SEC_MODE_WPA_CCMP)
+		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_WPA_MIXED)
 			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA;
-		else if (scan_results->sec_modes->secmode == SLSI_SEC_MODE_WEP)
+		else if (scan_results->sec_modes->secmode &
+				(SLSI_SEC_MODE_WEP|SLSI_SEC_MODE_WEP_SHARED))
 			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WEP;
+		else if (scan_results->sec_modes->secmode & SLSI_SEC_MODE_EAP)
+			g_saved_aps[i].encryption_flags = WIFI_ENCRYPTION_WPA2_ENTERPRISE;
 		else
 			g_saved_aps[i].encryption_flags = 0;
 
